@@ -2,37 +2,133 @@ require('dotenv').config();
 
 const express = require('express');
 const { MongoClient } = require('mongodb');
+const session = require('express-session');
+const { MongoStore } = require('connect-mongo');
+const crypto = require('crypto');
+const { rateLimit } = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1);
+
+const adminLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: 'Too many attempts. Please try again in 15 minutes.'
+    }
+});
 const PORT = process.env.PORT || 3000;
 
 const client = new MongoClient(process.env.MONGODB_URI);
+if (
+    !process.env.MONGODB_URI ||
+    !process.env.MONGODB_DB_NAME ||
+    !process.env.SESSION_SECRET ||
+    !process.env.ADMIN_SETUP_SECRET
+) {
+    throw new Error('Missing required database or session configuration.');
+}
 
-app.use(express.json());
+// Public images, styles and scripts (e.g. DCC This Week cards and carousel).
+app.use('/assets', express.static(require('path').join(__dirname, 'assets'), {
+    index: false,
+    maxAge: '1h'
+}));
 
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
+app.use(express.json({ limit: '32kb' }));
+app.use(session({
+    name: 'dcc_admin_sid',
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        client,
+        dbName: process.env.MONGODB_DB_NAME,
+        collectionName: 'admin_sessions',
+        ttl: 60 * 60 * 8
+    }),
+    cookie: {
+        httpOnly: true,
+        secure: process.env.RENDER === 'true',
+        sameSite: 'lax',
+        maxAge: 1000 * 60 * 60 * 8
+    }
+}));
 
-    next();
+
+app.get('/admin-dashboard.html', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+
+    if (req.session?.adminId !== 'primary') {
+        return res.redirect('/admin.html');
+    }
+
+    return res.sendFile(__dirname + '/admin-dashboard.html');
+});
+  
+
+app.get('/', (req, res) => {
+    return res.redirect('/DCC_Information_Hub_V1.html');
 });
 
-app.use(express.static(__dirname));
-
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-
-    next();
+app.get('/DCC_Information_Hub_V1.html', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    return res.sendFile(__dirname + '/DCC_Information_Hub_V1.html');
 });
+
+app.get('/dcc-information-hub.js', (req, res) => {
+    return res.sendFile(__dirname + '/dcc-information-hub.js');
+});
+
+app.get('/dcc-this-week-card.png', (req, res) => {
+    res.sendFile(__dirname + '/dcc-this-week-card.png', (err) => {
+        if (err) {
+            console.error('Failed to serve DCC This Week image:', err.message);
+
+            if (!res.headersSent) {
+                res.status(err.statusCode || 500).end();
+            }
+        }
+    });
+});
+
+const knowledgeFiles = [
+    '01-faqs-identity.md',
+    '02-events-calendar.md',
+    '03-forms-registration.md',
+    '04-ministries-fellowships-interest-groups.md',
+    '05-leadership-workforce.md',
+    '06-schools-resources.md',
+    '07-external-ecosystem-socials.md'
+];
+
+knowledgeFiles.forEach((file) => {
+    app.get('/' + file, (req, res) => {
+        res.sendFile(__dirname + '/' + file, (err) => {
+            if (err) {
+                console.error(`Failed to serve ${file}:`, err.message);
+                if (!res.headersSent) {
+                    res.status(err.statusCode || 500).end();
+                }
+            }
+        });
+    });
+});
+
+app.get('/admin.html', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    return res.sendFile(__dirname + '/admin.html');
+});
+
 
 app.get('/api/test', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const collections = await db.listCollections().toArray();
 
@@ -56,7 +152,7 @@ app.get('/api/events', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const events = await db
             .collection('events')
@@ -82,7 +178,7 @@ app.get('/api/worship-centres', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const worshipCentres = await db
             .collection('worship_centres')
@@ -108,7 +204,7 @@ app.get('/api/forms', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const forms = await db
             .collection('forms')
@@ -134,7 +230,7 @@ app.get('/api/giving-accounts', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const givingAccounts = await db
             .collection('giving_accounts')
@@ -160,7 +256,7 @@ app.get('/api/people', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const people = await db
             .collection('people')
@@ -186,7 +282,7 @@ app.get('/api/leadership-assignments', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const assignments = await db
             .collection('leadership_assignments')
@@ -212,7 +308,7 @@ app.get('/api/departments', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const departments = await db
             .collection('departments')
@@ -238,7 +334,7 @@ app.get('/api/resources', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const resources = await db
             .collection('resources')
@@ -264,7 +360,7 @@ app.get('/api/schools', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const schools = await db
             .collection('schools')
@@ -290,7 +386,7 @@ app.get('/api/long-form-content', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const content = await db
             .collection('long_form_content')
@@ -316,7 +412,7 @@ app.get('/api/external-links', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const links = await db
             .collection('external_links')
@@ -342,7 +438,7 @@ app.post('/api/contact-events', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const contactEvent = {
             session_id: req.body.session_id || null,
@@ -376,7 +472,7 @@ app.post('/api/contact-requests', async (req, res) => {
     try {
         await client.connect();
 
-        const db = client.db('dcc_information_hub');
+        const db = client.db(process.env.MONGODB_DB_NAME || 'dcc_information_hub');
 
         const name = String(req.body.name || '').trim();
         const whatsappNumber = String(req.body.whatsapp_number || '').trim();
@@ -471,6 +567,581 @@ app.post('/api/contact-requests', async (req, res) => {
     }
 });
 
+app.post('/api/admin/setup', adminLoginLimiter, async (req, res) => {
+    try {
+        const setupSecret = process.env.ADMIN_SETUP_SECRET;
+        const suppliedSecret = req.body?.setupSecret;
+
+        if (!setupSecret) {
+            return res.status(503).json({
+                success: false,
+                message: 'Admin setup is not configured.'
+            });
+        }
+
+        if (typeof suppliedSecret !== 'string') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid setup authorization.'
+            });
+        }
+
+        const expected = Buffer.from(setupSecret, 'utf8');
+        const supplied = Buffer.from(suppliedSecret, 'utf8');
+
+        if (
+            expected.length !== supplied.length ||
+            !crypto.timingSafeEqual(expected, supplied)
+        ) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid setup authorization.'
+            });
+        }
+
+        const { username, password } = req.body;
+
+        if (
+            typeof username !== 'string' ||
+            !/^[a-zA-Z0-9._-]{3,40}$/.test(username) ||
+            typeof password !== 'string' ||
+            password.length < 14 ||
+            Buffer.byteLength(password, 'utf8') > 1024
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Use a username of 3–40 letters, numbers, dots, underscores or hyphens, and a password of at least 14 characters.'
+            });
+        }
+
+        await client.connect();
+
+        const db = client.db(
+            process.env.MONGODB_DB_NAME || 'dcc_information_hub'
+        );
+
+        const admins = db.collection('admin_users');
+
+        const salt = crypto.randomBytes(16).toString('hex');
+
+        const passwordHash = await new Promise((resolve, reject) => {
+            crypto.scrypt(password, salt, 64, (error, key) => {
+                if (error) reject(error);
+                else resolve(key.toString('hex'));
+            });
+        });
+
+        await admins.insertOne({
+            _id: 'primary',
+            username: username.toLowerCase(),
+            passwordHash,
+            passwordSalt: salt,
+            createdAt: new Date()
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Initial administrator created. You can now log in.'
+        });
+
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: 'An administrator already exists. Setup is closed.'
+            });
+        }
+
+        console.error('Admin setup failed:', error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Admin setup failed.'
+        });
+    }
+});
+
+app.post('/api/admin/login', adminLoginLimiter, async (req, res) => {
+    try {
+        const { username, password } = req.body || {};
+
+        if (
+            typeof username !== 'string' ||
+            typeof password !== 'string' ||
+            username.length > 40 ||
+            password.length > 1024
+        ) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid username or password.'
+            });
+        }
+
+        await client.connect();
+
+        const db = client.db(
+            process.env.MONGODB_DB_NAME || 'dcc_information_hub'
+        );
+
+        const admin = await db.collection('admin_users').findOne({
+            _id: 'primary',
+            username: username.toLowerCase()
+        });
+
+        if (!admin) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid username or password.'
+            });
+        }
+
+        const passwordHash = await new Promise((resolve, reject) => {
+            crypto.scrypt(password, admin.passwordSalt, 64, (error, key) => {
+                if (error) reject(error);
+                else resolve(key);
+            });
+        });
+
+        const storedHash = Buffer.from(admin.passwordHash, 'hex');
+
+        if (
+            storedHash.length !== passwordHash.length ||
+            !crypto.timingSafeEqual(storedHash, passwordHash)
+        ) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid username or password.'
+            });
+        }
+
+        req.session.regenerate((error) => {
+            if (error) {
+                console.error('Session regeneration failed:', error.message);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Login could not be completed.'
+                });
+            }
+
+            req.session.adminId = 'primary';
+
+            req.session.save((saveError) => {
+                if (saveError) {
+                    console.error('Session save failed:', saveError.message);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Login could not be completed.'
+                    });
+                }
+
+                return res.json({
+                    success: true,
+                    message: 'Login successful.'
+                });
+            });
+        });
+
+    } catch (error) {
+        console.error('Admin login failed:', error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Login could not be completed.'
+        });
+    }
+});
+
+app.get('/api/admin/me', (req, res) => {
+    if (req.session?.adminId !== 'primary') {
+        return res.status(401).json({
+            success: false,
+            authenticated: false,
+            message: 'Not logged in.'
+        });
+    }
+
+    return res.json({
+        success: true,
+        authenticated: true
+    });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+    req.session.destroy((error) => {
+        if (error) {
+            console.error('Admin logout failed:', error.message);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Logout could not be completed.'
+            });
+        }
+
+        res.clearCookie('dcc_admin_sid', {
+            httpOnly: true,
+            secure: process.env.RENDER === 'true',
+            sameSite: 'lax',
+            path: '/'
+        });
+
+        return res.json({
+            success: true,
+            message: 'Logged out successfully.'
+        });
+    });
+});
+
+const CMS_COLLECTIONS = new Set([
+    'events',
+    'worship_centres',
+    'forms',
+    'giving_accounts',
+    'people',
+    'leadership_assignments',
+    'departments',
+    'resources',
+    'schools',
+    'long_form_content',
+    'external_links'
+]);
+
+const CMS_ALLOWED_FIELDS = {
+    resources: new Set([
+        'resource_id',
+        'title',
+        'type',
+        'url',
+        'description',
+        'source_ref',
+        'button_label',
+        'display_order',
+        'is_active',
+        'content_level',
+        'platform_urls',
+        'app_store_urls'
+    ])
+};
+
+function requireAdmin(req, res, next) {
+    if (req.session?.adminId !== 'primary') {
+        return res.status(401).json({
+            success: false,
+            message: 'Administrator authentication required.'
+        });
+    }
+
+    next();
+}
+
+function getCmsCollection(req, res) {
+    const name = req.params.collection;
+
+    if (!CMS_COLLECTIONS.has(name)) {
+        res.status(404).json({
+            success: false,
+            message: 'This content collection is not available for editing.'
+        });
+        return null;
+    }
+
+    return client.db(process.env.MONGODB_DB_NAME).collection(name);
+}
+
+
+function validateCmsDocument(collectionName, body, mode = 'create') {
+    if (
+        !body ||
+        typeof body !== 'object' ||
+        Array.isArray(body)
+    ) {
+        return {
+            valid: false,
+            error: 'Request body must be a JSON object.'
+        };
+    }
+
+    if (Buffer.byteLength(JSON.stringify(body), 'utf8') > 32 * 1024) {
+        return {
+            valid: false,
+            error: 'Request body exceeds the 32KB limit.'
+        };
+    }
+
+    const allowedFields = CMS_ALLOWED_FIELDS[collectionName];
+
+    if (!allowedFields) {
+        return {
+            valid: false,
+            error: `Editing is not yet configured for ${collectionName}.`
+        };
+    }
+
+    for (const key of Object.keys(body)) {
+        if (
+            key === '_id' ||
+            key.startsWith('$') ||
+            key.includes('.') ||
+            ['__proto__', 'constructor', 'prototype'].includes(key)
+        ) {
+            return {
+                valid: false,
+                error: `Field "${key}" is not permitted.`
+            };
+        }
+
+        if (!allowedFields.has(key)) {
+            return {
+                valid: false,
+                error: `Field "${key}" is not allowed for ${collectionName}.`
+            };
+        }
+    }
+
+    if (collectionName === 'resources') {
+        const stringFields = [
+            'resource_id',
+            'title',
+            'type',
+            'url',
+            'description',
+            'source_ref',
+            'button_label',
+            'content_level',
+            'platform_urls',
+            'app_store_urls'
+        ];
+
+        for (const field of stringFields) {
+            if (
+                body[field] !== undefined &&
+                typeof body[field] !== 'string'
+            ) {
+                return {
+                    valid: false,
+                    error: `Field "${field}" must be a string.`
+                };
+            }
+        }
+
+        if (
+            body.display_order !== undefined &&
+            (
+                typeof body.display_order !== 'number' ||
+                !Number.isFinite(body.display_order)
+            )
+        ) {
+            return {
+                valid: false,
+                error: 'Field "display_order" must be a finite number.'
+            };
+        }
+
+        if (
+            body.is_active !== undefined &&
+            typeof body.is_active !== 'boolean'
+        ) {
+            return {
+                valid: false,
+                error: 'Field "is_active" must be true or false.'
+            };
+        }
+
+        if (body.url !== undefined) {
+            try {
+                const parsedUrl = new URL(body.url);
+
+                if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                    throw new Error('Unsupported URL protocol.');
+                }
+            } catch {
+                return {
+                    valid: false,
+                    error: 'Field "url" must be a valid HTTP or HTTPS URL.'
+                };
+            }
+        }
+
+        if (mode === 'create') {
+            const requiredFields = [
+                'resource_id',
+                'title',
+                'type',
+                'url',
+                'button_label',
+                'display_order',
+                'is_active'
+            ];
+
+            for (const field of requiredFields) {
+                if (
+                    body[field] === undefined ||
+                    body[field] === null ||
+                    (
+                        typeof body[field] === 'string' &&
+                        body[field].trim() === ''
+                    )
+                ) {
+                    return {
+                        valid: false,
+                        error: `Field "${field}" is required.`
+                    };
+                }
+            }
+        }
+
+        if (mode === 'update' && body.resource_id !== undefined) {
+            return {
+                valid: false,
+                error: 'Field "resource_id" cannot be changed.'
+            };
+        }
+    }
+
+    return { valid: true };
+}
+
+// Protect write requests against cross-origin browser submissions.
+function requireSameOrigin(req, res, next) {
+    const origin = req.get('origin');
+
+    if (!origin) {
+        return res.status(403).json({
+            success: false,
+            message: 'Request origin is required.'
+        });
+    }
+
+    try {
+        const requestOrigin = new URL(origin).origin;
+        const expectedOrigin = `${req.protocol}://${req.get('host')}`;
+
+        if (requestOrigin !== expectedOrigin) {
+            return res.status(403).json({
+                success: false,
+                message: 'Cross-origin requests are not permitted.'
+            });
+        }
+    } catch {
+        return res.status(403).json({
+            success: false,
+            message: 'Invalid request origin.'
+        });
+    }
+
+    next();
+}
+
+app.use('/api/admin/content', requireAdmin);
+
+app.get('/api/admin/content/:collection', async (req, res) => {
+    try {
+        const collection = getCmsCollection(req, res);
+        if (!collection) return;
+
+        const records = await collection
+            .find({})
+            .limit(500)
+            .toArray();
+
+        res.set('Cache-Control', 'no-store');
+        return res.json({ success: true, records });
+    } catch (error) {
+        console.error('CMS list failed:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Could not retrieve content records.'
+        });
+    }
+});
+
+app.post('/api/admin/content/:collection', requireSameOrigin, async (req, res) => {
+    try {
+        const collection = getCmsCollection(req, res);
+        if (!collection) return;
+
+ const validation = validateCmsDocument(
+    req.params.collection,
+    req.body,
+    'create'
+);
+        if (!validation.valid) {
+            return res.status(400).json({
+                success: false,
+                message: validation.error
+            });
+        }
+
+        const document = { ...req.body };
+
+        const result = await collection.insertOne(document);
+
+        return res.status(201).json({
+            success: true,
+            message: 'Record created.',
+            id: result.insertedId
+        });
+    } catch (error) {
+        console.error('CMS create failed:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Could not create the record.'
+        });
+    }
+});
+
+app.put('/api/admin/content/:collection/:id', requireSameOrigin, async (req, res) => {
+    try {
+        const collection = getCmsCollection(req, res);
+        if (!collection) return;
+
+        const filter = getRecordFilter(req.params.id);
+        if (!filter) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid record ID.'
+            });
+        }
+
+        const validation = validateCmsDocument(
+            req.params.collection,
+            req.body,
+            'update'
+        );
+
+        if (!validation.valid) {
+            return res.status(400).json({
+                success: false,
+                message: validation.error
+            });
+        }
+
+        const update = { ...req.body };
+
+        const result = await collection.updateOne(
+            filter,
+            { $set: update }
+        );
+
+        if (!result.matchedCount) {
+            return res.status(404).json({
+                success: false,
+                message: 'Record not found.'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: 'Record updated.'
+        });
+    } catch (error) {
+        console.error('CMS update failed:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Could not update the record.'
+        });
+    }
+});
+  
 app.listen(PORT, () => {
     console.log(`DCC Information Hub backend running at http://localhost:${PORT}`);
 });

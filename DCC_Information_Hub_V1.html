@@ -421,6 +421,36 @@
     .hub-link { display:inline-flex; align-items:center; gap:6px; color:#c2baff; text-decoration:none; border:1px solid rgba(155,141,240,.28); background:rgba(118,103,217,.11); border-radius:10px; padding:9px 11px; font-weight:700; font-size:11px; }
     .hub-link:hover,.hub-link:focus-visible { background:rgba(118,103,217,.2); text-decoration:none; outline:2px solid rgba(155,141,240,.35); outline-offset:2px; }
     .notice { margin-top:11px; padding:10px 11px; border-left:2px solid #7667d9; background:rgba(118,103,217,.06); color:#989fb8; font-size:14px; line-height:1.5; }
+    
+.giving-account-section {
+  margin: 0 0 20px;
+  padding: 0 0 16px;
+  line-height: 1.7;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.giving-account-section:last-of-type {
+  margin-bottom: 12px;
+  border-bottom: none;
+}
+
+.giving-account-section > strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+}
+
+.giving-account-section > div {
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+
+.giving-account-section + .notice {
+  margin-top: 12px;
+  padding: 14px;
+  line-height: 1.7;
+  border-radius: 8px;
+}
     .muted-note { color:#7f869f; font-size:10px; }
     .quick { cursor:pointer; }
     .quick:focus-visible { outline:2px solid rgba(155,141,240,.6); outline-offset:2px; }
@@ -515,28 +545,28 @@
   }
 
   .hub-menu.dcc-main-menu .hub-option:nth-child(1)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7v5l3.2 2'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7v5l3.2 2'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(2)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='16' height='15' rx='2'/%3E%3Cpath d='M8 3v4M16 3v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 16h.01M12 16h.01'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='5' width='16' height='15' rx='2'/%3E%3Cpath d='M8 3v4M16 3v4M4 9h16M8 13h.01M12 13h.01M16 13h.01M8 16h.01M12 16h.01'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(3)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Ccircle cx='17' cy='10' r='2.5'/%3E%3Cpath d='M3.5 19c.6-3.1 2.6-5 5.5-5s4.9 1.9 5.5 5M14 15.5c2.5-.2 4.7 1 5.5 3.5'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Ccircle cx='17' cy='10' r='2.5'/%3E%3Cpath d='M3.5 19c.6-3.1 2.6-5 5.5-5s4.9 1.9 5.5 5M14 15.5c2.5-.2 4.7 1 5.5 3.5'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(4)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h8l4 4V20.5H6z'/%3E%3Cpath d='M14 3.5v5h4M9 13h6M9 16h6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h8l4 4V20.5H6z'/%3E%3Cpath d='M14 3.5v5h4M9 13h6M9 16h6'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(5)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z'/%3E%3Ccircle cx='12' cy='9' r='2.3'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z'/%3E%3Ccircle cx='12' cy='9' r='2.3'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(6)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 5.5h14a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H11l-4.5 3v-3H5a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3z'/%3E%3Cpath d='M7 11.5h10'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 5.5h14a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H11l-4.5 3v-3H5a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3z'/%3E%3Cpath d='M7 11.5h10'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(7)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='m10 8.5 5.5 3.5-5.5 3.5z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='m10 8.5 5.5 3.5-5.5 3.5z'/%3E%3C/svg%3E");
   }
   .hub-menu.dcc-main-menu .hub-option:nth-child(8)::before {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b9adff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 10v6M12 7.2h.01'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 10v6M12 7.2h.01'/%3E%3C/svg%3E");
   }
 
   .hub-menu.dcc-main-menu .hub-option:nth-child(1) > span:last-child::after { content: "Service times, locations, first-timer information and more"; }
@@ -555,7 +585,774 @@
     .hub-menu.dcc-main-menu .hub-option > span:last-child::after { font-size: 10px; }
   }
 
-  </style>
+  
+    /* Database-backed pastor and minister roster cards */
+    .leadership-roster { display:grid; gap:10px; margin-top:12px; }
+    .leadership-card { padding:12px 14px; border:1px solid rgba(255,255,255,.09); border-radius:12px; background:rgba(255,255,255,.035); }
+    .leadership-card-name { color:#f0f1f6; font-size:13px; font-weight:750; line-height:1.45; }
+    .leadership-card-position { margin-top:5px; color:#b9bdd0; font-size:12px; line-height:1.55; }
+    .leadership-card-position strong { color:#a99eff; font-weight:650; }
+</style>
+
+<style>
+:root{--dcc-purple:#9878ff;--dcc-purple-bright:#a98cff}
+body{min-height:100vh;background:radial-gradient(ellipse at 88% 7%,rgba(91,65,190,.26),transparent 34%),radial-gradient(ellipse at 4% 90%,rgba(54,70,145,.18),transparent 38%),linear-gradient(118deg,#080d1b 0%,#0a1021 54%,#11102b 100%)}
+body::before{opacity:.22;background-size:56px 56px}
+.page {
+    width: min(1530px, calc(100% - 80px));
+    min-height: 100vh;
+    margin: 0 auto;
+}
+
+header {
+    height: 100px;
+    flex: 0 0 100px;
+}
+.brand{gap:14px}.brand img{width:43px;height:50px}.brand-name{font-size:13.5px;letter-spacing:.015em}.brand-sub{font-size:10.8px;letter-spacing:.01em;color:#d2d5e3}
+.header-title{font-size:14.4px;letter-spacing:.015em;font-weight:650}.prototype{display:none!important}
+main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: clamp(40px, 4vw, 72px);
+    align-items: center;
+    padding: 7px 0 28px;
+}
+.intro{width:100%;max-width:650px;padding:0 0 0 8px;transform:translateY(2px)}
+.hero-rule{width:70px;height:2px;background:var(--dcc-purple);margin-bottom:24px}
+.eyebrow{display:none}
+h1{font-size:clamp(43px,3.65vw,63px);line-height:1.12;letter-spacing:-.045em;font-weight:760}
+.accent{color:var(--dcc-purple-bright)}
+.intro p{max-width:590px;margin:16px 0 27px;color:#c4cce4;font-size:clamp(15.3px,1.22vw,19.8px);line-height:1.55}
+.week-card{position:relative;isolation:isolate;display:block;min-height:290px;width:100%;overflow:hidden;border:1px solid rgba(169,140,255,.92);border-radius:27px;text-decoration:none;color:#fff;background: url("dcc-this-week-card.png") center / cover no-repeat;box-shadow:0 18px 55px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.035);transition:transform .2s,border-color .2s,box-shadow .2s}
+.week-card:hover,.week-card:focus-visible{transform:translateY(-3px);border-color:#c3b0ff;box-shadow:0 22px 65px rgba(0,0,0,.28),0 0 0 3px rgba(169,140,255,.13);outline:none}
+.week-card-copy{position:absolute;z-index:2;inset:0 auto 0 0;width:66%;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:30px 34px;pointer-events:none}.week-arrow,
+.week-card-copy,
+.week-art {
+    display: none !important;
+}
+.week-calendar{display:block;width:43px;height:43px;margin-bottom:17px;color:white}.week-calendar svg{width:100%;height:100%}
+.week-title{font-size:clamp(38px,3.2vw,58px);font-weight:760;line-height:1.05;letter-spacing:-.04em}.week-title strong{color:var(--dcc-purple-bright);font-weight:760}
+.week-art {
+    display: block;
+    position: absolute;
+    z-index: 1;
+    inset: 0 0 0 45%;
+    overflow: hidden;
+    background: linear-gradient(
+        115deg,
+        transparent,
+        rgba(34,25,74,.15) 22%,
+        rgba(185,161,255,.25)
+    );
+}
+.week-glow{position:absolute;width:130px;height:130px;top:5%;left:39%;border-radius:50%;background:#ffb5a0;filter:blur(32px);opacity:.92}
+.week-paper{position:absolute;width:88%;height:115%;right:-15%;bottom:-29%;transform:rotate(-26deg);border-radius:18px;background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(194,179,255,.92) 48%,rgba(119,99,197,.86));box-shadow:-18px -8px 45px rgba(255,255,255,.16)}
+.paper-grid{position:absolute;inset:12% 8%;opacity:.32;background-image:linear-gradient(rgba(65,53,111,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(65,53,111,.28) 1px,transparent 1px);background-size:36px 36px}
+.paper-pin{position:absolute;top:23%;left:38%;width:17px;height:82px;border-radius:50% 50% 7px 7px;background:linear-gradient(90deg,#1b1642,#51409a 55%,#21174e);box-shadow:0 8px 14px rgba(15,10,42,.38);transform:rotate(25deg)}
+.paper-pin:before{content:"";position:absolute;top:-9px;left:-7px;width:31px;height:22px;border-radius:50%;background:linear-gradient(145deg,#7160bd,#211747 75%)}
+.week-dots{display:none!important}
+.chat-shell {
+    justify-self: stretch;
+    width: 100%;
+    max-width: 690px;
+    height: min(82vh, 760px);
+    min-height: 650px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(151,133,225,.2);
+    border-radius: 29px;
+    background: rgba(9,14,31,.88);
+    box-shadow: 0 30px 90px rgba(0,0,0,.3),
+                0 0 0 1px rgba(255,255,255,.018);
+    backdrop-filter: blur(22px);
+}
+.chat-head{flex:0 0 87px;min-height:87px;padding:18px 23px;border-bottom:1px solid rgba(255,255,255,.045);background:rgba(255,255,255,.018)}
+.bot-avatar{width:52px;height:52px;border-radius:16px;font-size:25px}.bot-name{font-size:19px;font-weight:650}.bot-status{color:#c2c9e2;font-size:14px;margin-top:4px}.online{width:9px;height:9px;margin-right:7px}
+.chat-head>div:last-child{color:#b9a9ff!important;font-size:22px!important;letter-spacing:3px}
+.chat-body{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;padding:12px 23px 22px;gap:0;justify-content:flex-start;scrollbar-width: thin;
+scrollbar-color: rgba(169,140,255,.55) transparent;}
+.chat-body::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+    background: rgba(169,140,255,.55);
+    border-radius: 10px;
+}
+.hub-entry{max-width:100%;margin-top:0}.welcome-label{display:none}.welcome{width:100%;margin:0 0 12px}
+.message {
+    width: 100%;
+    min-height: 0;
+    display: block;
+    padding: 16px 19px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 15px;
+    background: linear-gradient(105deg, #151d37, #17213d);
+    color: #d5dcf7;
+    font-size: 16px;
+    line-height: 1.55;
+}
+.welcome .message:before {
+    content: "";
+    display: block;
+    flex: 0 0 45px;
+    width: 45px;
+    height: 45px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23BFA5FF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.5 23V10.5a3 3 0 0 1 6 0V22 7.5a3 3 0 0 1 6 0V22 9.5a3 3 0 0 1 6 0V23v-6a3 3 0 0 1 6 0v13c0 8-5.5 13.5-13 13.5h-2c-5 0-8.5-2.2-11-6l-5-7a3 3 0 0 1 4.8-3.6l5.2 5.5'/%3E%3Cpath d='M9 11 6 8M13 7l-1-4M5 17H2'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    filter: none;
+}
+.message strong{color:#fff;font-weight:700}.welcome-sub{color:#b9c2df;font-weight:400}
+.hub-menu.dcc-main-menu{gap:7px;margin-top:0}
+.hub-menu.dcc-main-menu .hub-option{min-height:79px;align-items:center;padding:12px 48px 12px 94px;border:1px solid rgba(255,255,255,.025);border-radius:17px;background:linear-gradient(105deg,rgba(21,29,53,.98),rgba(19,27,49,.98));transition:background .18s,border-color .18s,transform .18s}
+.hub-menu.dcc-main-menu .hub-option:hover,.hub-menu.dcc-main-menu .hub-option:focus-visible{background:linear-gradient(105deg,#202849,#1a2341);border-color:rgba(169,140,255,.35);transform:translateY(-1px)}
+.hub-menu.dcc-main-menu .hub-option:before {
+    left: 14px;
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    background-color: rgba(118,103,217,.42);
+    background-size: 31px 31px;
+    box-shadow:
+        inset 0 0 0 1px rgba(169,140,255,.24),
+        0 3px 12px rgba(80,60,170,.12);
+}
+.hub-menu.dcc-main-menu .hub-number{width:26px;flex-basis:26px;margin-right:8px;font-size:16px;font-weight:500}
+.hub-menu.dcc-main-menu .hub-option>span:last-child{font-size:16px;line-height:1.3;font-weight:600}
+.hub-menu.dcc-main-menu .hub-option>span:last-child:after{margin-top:7px;font-size:14px;line-height:1.3;color:#c0c9e5}
+.hub-menu.dcc-main-menu .hub-option:after{content:"";display:block;position:absolute;right:21px;top:50%;width:10px;height:10px;border-top:2px solid #b6b9ff;border-right:2px solid #b6b9ff;transform:translateY(-50%) rotate(45deg)}
+.hub-utility{gap:9px}.hub-utility-btn{padding:9px 13px;font-size:12px}.md-result{line-height:1.6}.input-wrap{display:none!important}
+@media(max-width:1100px){.page{width:min(100% - 44px,900px)}main{grid-template-columns:1fr;gap:34px;padding:20px 0 40px}.intro{max-width:690px}.chat-shell{justify-self:stretch;max-width:none;height:720px}.week-card{min-height:260px}}
+@media(max-width:600px){.page{width:calc(100% - 28px)}header{height:82px;flex-basis:82px}.brand img{width:40px;height:46px}.brand-copy{display:flex}.brand-name{font-size:10px}.brand-sub{font-size:8px}.header-title{display:none}main{gap:26px;padding-top:14px}.intro{padding-left:0}.hero-rule{margin-bottom:17px}h1{font-size:clamp(35px,9.9vw,49px)}.intro p{font-size:13.5px;margin:13px 0 19px}.week-card {
+    aspect-ratio: 2.2 / 1;
+    min-height: 0;
+    border-radius: 21px;
+    background-size: 100% 100%;
+    background-position: center;
+}.week-card-copy{padding:24px}.week-calendar{width:34px;height:34px;margin-bottom:12px}.week-title{font-size:39px}.chat-shell{height:690px;min-height:590px;border-radius:22px}.chat-head{flex-basis:75px;min-height:75px;padding:12px 14px}.bot-avatar{width:44px;height:44px;font-size:21px}.bot-name{font-size:16px}.bot-status{font-size:12px}.chat-body{padding:12px 12px 18px}.message{min-height:0;padding:13px 14px;font-size:14px;line-height:1.5}.welcome .message:before{flex-basis:34px;width:34px;height:34px;font-size:27px}.hub-menu.dcc-main-menu{gap:7px}.hub-menu.dcc-main-menu .hub-option{min-height:72px;padding:10px 34px 10px 68px;border-radius:14px}.hub-menu.dcc-main-menu .hub-option:before{left:9px;width:43px;height:43px;background-size:24px 24px}.hub-menu.dcc-main-menu .hub-number{width:20px;flex-basis:20px;margin-right:5px;font-size:13px}.hub-menu.dcc-main-menu .hub-option>span:last-child{font-size:13px}.hub-menu.dcc-main-menu .hub-option>span:last-child:after{font-size:11px;margin-top:4px}.hub-menu.dcc-main-menu .hub-option:after{right:15px;width:8px;height:8px}}
+@media(max-width:600px){.week-card-copy{padding:22px 24px;width:72%}.week-calendar{width:34px;height:34px;margin-bottom:12px}.week-title{font-size:clamp(32px,9vw,40px)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
+
+<style>
+/* Welcome card: icon at left, two stacked lines */
+.welcome {
+    align-self: stretch;
+    width: 100%;
+    max-width: none;
+    margin: 0 0 12px;
+}
+
+.welcome .message {
+    width: 100%;
+    min-height: 92px;
+    display: grid;
+    grid-template-columns: 45px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 23px;
+    row-gap: 4px;
+    align-items: center;
+    padding: 18px 24px;
+    border: 0;
+    border-radius: 17px;
+    background: linear-gradient(105deg, #151d37, #17213d);
+    color: #d5dcf7;
+    font-size: 18px;
+    line-height: 1.45;
+}
+
+.welcome .message:before {
+    content: "";
+    display: block;
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: center;
+    justify-self: center;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23BFA5FF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16.5 23V10.5a3 3 0 0 1 6 0V22 7.5a3 3 0 0 1 6 0V22 9.5a3 3 0 0 1 6 0V23v-6a3 3 0 0 1 6 0v13c0 8-5.5 13.5-13 13.5h-2c-5 0-8.5-2.2-11-6l-5-7a3 3 0 0 1 4.8-3.6l5.2 5.5'/%3E%3Cpath d='M9 11 6 8M13 7l-1-4M5 17H2'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    filter: none;
+}
+
+.welcome-title {
+    display: block;
+    grid-column: 2;
+    grid-row: 1;
+    color: #fff;
+    font-weight: 700;
+}
+
+.welcome-sub {
+    display: block;
+    grid-column: 2;
+    grid-row: 2;
+    color: #b9c2df;
+    font-weight: 400;
+}
+
+@media (max-width: 600px) {
+    .welcome .message {
+        min-height: 76px;
+        padding: 14px;
+        grid-template-columns: 34px minmax(0, 1fr);
+        column-gap: 13px;
+        font-size: 15px;
+    }
+
+        .welcome .message:before {
+    width: 32px;
+    height: 32px;
+}
+}
+</style>
+  
+<style>
+/* =========================================
+   DCC SUBMENU DESIGN — BATCH 1
+   Applies to all menus except the main menu
+========================================= */
+
+.hub-menu:not(.dcc-main-menu) {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+    width: 100%;
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-menu-title {
+    color: #b9a9ff;
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .06em;
+    margin-bottom: 3px;
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-option {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+
+    border: 1px solid rgba(169,140,255,.13);
+    border-radius: 12px;
+
+    background: linear-gradient(
+        105deg,
+        rgba(21,29,53,.98),
+        rgba(19,27,49,.98)
+    );
+
+    color: #edf0fa;
+    text-align: left;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.4;
+
+    cursor: pointer;
+    transition:
+        background .18s ease,
+        border-color .18s ease,
+        transform .18s ease;
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-option:hover,
+.hub-menu:not(.dcc-main-menu) .hub-option:focus-visible {
+    background: linear-gradient(
+        105deg,
+        rgba(39,45,78,.98),
+        rgba(27,35,65,.98)
+    );
+    border-color: rgba(169,140,255,.48);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-number {
+    width: 25px;
+    height: 25px;
+    flex: 0 0 25px;
+
+    display: grid;
+    place-items: center;
+
+    border: 1px solid rgba(169,140,255,.17);
+    border-radius: 8px;
+
+    background: rgba(118,103,217,.19);
+    color: #c5b8ff;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-option > span:last-child {
+    min-width: 0;
+    display: block;
+    color: #edf0fa;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.4;
+}
+
+/* Mobile submenu adjustments */
+@media (max-width: 600px) {
+    .hub-menu:not(.dcc-main-menu) {
+        gap: 7px;
+        margin-top: 12px;
+    }
+
+    .hub-menu:not(.dcc-main-menu) .hub-option {
+        min-height: 44px;
+        padding: 9px 11px;
+        gap: 10px;
+        border-radius: 11px;
+        font-size: 12px;
+    }
+
+    .hub-menu:not(.dcc-main-menu) .hub-number {
+        width: 23px;
+        height: 23px;
+        flex-basis: 23px;
+        font-size: 10px;
+    }
+
+    .hub-menu:not(.dcc-main-menu) .hub-option > span:last-child {
+        font-size: 12px;
+    }
+}
+</style>
+<style>
+/* =========================================
+   DCC DISPLAY — BATCH 2
+   A) Contact the Team form styling
+   B) Main-menu icons for options 3, 5, 6, 7, 8
+   C) Option 1 subtitle copy
+   Scoped: affects only .contact-form and
+   .dcc-main-menu options 1, 3, 5, 6, 7, 8.
+========================================= */
+
+/* ---- A) Contact the Team (WhatsApp) form ---- */
+.contact-form {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.contact-field {
+    display: grid;
+    gap: 7px;
+}
+
+.contact-field > label {
+    color: #c5b8ff;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: .02em;
+}
+
+.contact-input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid rgba(169,140,255,.18);
+    border-radius: 12px;
+    background: rgba(9,13,30,.75);
+    color: #edf0fa;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.contact-input::placeholder {
+    color: #7d84a0;
+}
+
+.contact-input:focus {
+    outline: none;
+    border-color: rgba(169,140,255,.6);
+    box-shadow: 0 0 0 3px rgba(118,103,217,.22);
+}
+
+.contact-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.contact-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid rgba(169,140,255,.18);
+    border-radius: 12px;
+    background: rgba(9,13,30,.75);
+    color: #edf0fa;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease;
+}
+
+.contact-radio:hover {
+    border-color: rgba(169,140,255,.45);
+}
+
+.contact-radio input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    border: 1.5px solid rgba(197,184,255,.55);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.contact-radio input::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #a99eff;
+    transform: scale(0);
+    transition: transform .15s ease;
+}
+
+.contact-radio input:checked {
+    border-color: #a99eff;
+}
+
+.contact-radio input:checked::before {
+    transform: scale(1);
+}
+
+.contact-radio:has(input:checked) {
+    border-color: rgba(169,140,255,.6);
+    background: rgba(118,103,217,.16);
+}
+
+.contact-radio input:focus-visible {
+    outline: 2px solid rgba(169,140,255,.7);
+    outline-offset: 2px;
+}
+
+.contact-submit {
+    justify-self: start;
+    min-height: 44px;
+    margin-top: 4px;
+    padding: 0 26px;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #8b7cf6, #6a58d6);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(106,88,214,.28);
+    transition: filter .18s ease, transform .18s ease, opacity .18s ease;
+}
+
+.contact-submit:hover:not(:disabled),
+.contact-submit:focus-visible {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.contact-submit:disabled {
+    background: rgba(118,103,217,.18);
+    color: #8f96ad;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .contact-submit {
+        justify-self: stretch;
+    }
+}
+
+/* ---- B) Main-menu icons that match each option's meaning ---- */
+/* 3 Sermons = play; 5 Giving = giving hand; 6 Pastors = people; 7 Resources = book; 8 Contact = headset */
+.hub-menu.dcc-main-menu .hub-option:nth-child(3)::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='m10 8.7 5.2 3.3-5.2 3.3V8.7Z' fill='%23d4baff' stroke='none'/%3E%3C/svg%3E");
+}
+.hub-menu.dcc-main-menu .hub-option:nth-child(5)::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 12.5h4l2.2 2h4.1c1.1 0 1.8-.7 1.8-1.6s-.7-1.5-1.7-1.5h-2.4'/%3E%3Cpath d='m7.5 12.5 2.2-2.1c.6-.5 1.2-.8 2-.8h3.1c1 0 1.7.6 1.7 1.5'/%3E%3Cpath d='M3.5 12.5v5h3l2.1 1.1c.6.3 1.2.4 1.8.4h4.1c.7 0 1.3-.2 1.8-.7l4.2-4.1c.7-.7.7-1.7 0-2.3-.6-.6-1.5-.6-2.2 0l-2.5 2.1'/%3E%3Cpath d='M3.5 12.5V10h3.2l2.1-1.3c.5-.3 1-.5 1.6-.5h2.1'/%3E%3C/svg%3E");
+}
+.hub-menu.dcc-main-menu .hub-option:nth-child(6)::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='7.5' r='3'/%3E%3Cpath d='M6.5 19.5v-1.2a5.5 5.5 0 0 1 11 0v1.2'/%3E%3Cpath d='M5.2 10.2a2.5 2.5 0 0 0 0 4.8M3.5 19v-.7a4 4 0 0 1 2.2-3.6'/%3E%3Cpath d='M18.8 10.2a2.5 2.5 0 0 1 0 4.8M20.5 19v-.7a4 4 0 0 0-2.2-3.6'/%3E%3C/svg%3E");
+}
+.hub-menu.dcc-main-menu .hub-option:nth-child(7)::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6.5c-2.1-1.6-5.1-2.1-8.5-1.5v13c3.4-.6 6.4-.1 8.5 1.5'/%3E%3Cpath d='M12 6.5c2.1-1.6 5.1-2.1 8.5-1.5v13c-3.4-.6-6.4-.1-8.5 1.5'/%3E%3Cpath d='M12 6.5v13'/%3E%3C/svg%3E");
+}
+.hub-menu.dcc-main-menu .hub-option:nth-child(8)::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4baff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 13v-1a8 8 0 0 1 16 0v1'/%3E%3Cpath d='M4 12.5h2.5a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H6A2 2 0 0 1 4 16.5z'/%3E%3Cpath d='M20 12.5h-2.5A1.5 1.5 0 0 0 16 14v3a1.5 1.5 0 0 0 1.5 1.5H18a2 2 0 0 0 2-2z'/%3E%3Cpath d='M16 20h-3'/%3E%3C/svg%3E");
+}
+
+/* ---- C) Option 1 subtitle (First Timers now lives under Forms) ---- */
+.hub-menu.dcc-main-menu .hub-option:nth-child(1) > span:last-child::after {
+    content: "Service times, locations and more";
+}
+</style>
+<style>
+/* =========================================
+   DCC DISPLAY — BATCH 3
+   A) Utility buttons (Back / Main menu /
+      Contact Our Team): larger, clearer,
+      comfortable tap size
+   B) Submenus: chevron + "1." numbering to
+      echo the main menu (lighter variant)
+   Scoped: .hub-utility and
+   .hub-menu:not(.dcc-main-menu) only.
+========================================= */
+
+/* ---- A) Utility buttons ---- */
+.hub-utility {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.hub-utility-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid rgba(169,140,255,.22);
+    border-radius: 12px;
+    background: rgba(118,103,217,.10);
+    color: #d9dcf0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+}
+
+.hub-utility-btn:hover,
+.hub-utility-btn:focus-visible {
+    background: rgba(118,103,217,.22);
+    border-color: rgba(169,140,255,.55);
+    color: #fff;
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.hub-utility-btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(118,103,217,.25);
+}
+
+@media (max-width: 600px) {
+    .hub-utility-btn {
+        flex: 1 1 auto;
+        min-height: 44px;
+        padding: 0 12px;
+    }
+}
+
+/* ---- B) Submenus: echo the main menu, lighter ---- */
+.hub-menu:not(.dcc-main-menu) .hub-option {
+    position: relative;
+    min-height: 52px;
+    padding: 12px 44px 12px 16px;
+    gap: 4px;
+    border-radius: 14px;
+    font-size: 14px;
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-option > span:last-child {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Plain "1." numbering like the main menu (no box) */
+.hub-menu:not(.dcc-main-menu) .hub-number {
+    width: auto;
+    min-width: 22px;
+    height: auto;
+    flex: 0 0 auto;
+    display: inline-block;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #c5b8ff;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.hub-menu:not(.dcc-main-menu) .hub-number::after {
+    content: ".";
+}
+
+/* Same chevron as the main menu, slightly softer */
+.hub-menu:not(.dcc-main-menu) .hub-option::after {
+    content: "";
+    display: block;
+    position: absolute;
+    right: 19px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid rgba(182,185,255,.8);
+    border-right: 2px solid rgba(182,185,255,.8);
+    transform: translateY(-50%) rotate(45deg);
+}
+
+@media (max-width: 600px) {
+    .hub-menu:not(.dcc-main-menu) .hub-option {
+        min-height: 48px;
+        padding: 11px 38px 11px 13px;
+        font-size: 13px;
+    }
+
+    .hub-menu:not(.dcc-main-menu) .hub-option > span:last-child,
+    .hub-menu:not(.dcc-main-menu) .hub-number {
+        font-size: 13px;
+    }
+
+    .hub-menu:not(.dcc-main-menu) .hub-option::after {
+        right: 16px;
+        width: 7px;
+        height: 7px;
+    }
+}
+</style>
+<style>
+/* =========================================
+   DCC DISPLAY — BATCH 4
+   A) In-answer link buttons (Open form,
+   Register, Open official Giving page,
+   View sermons, etc.) styled to match the
+   purple contact-form Submit button.
+   B) Tablet layout (601–1100px only): one
+      aligned column, uncropped This Week card.
+   Scoped: .hub-link; .page/.intro/.week-card
+   on tablet widths only.
+========================================= */
+.link-row {
+    margin-top: 14px;
+}
+
+.hub-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #8b7cf6, #6a58d6);
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.2;
+    text-decoration: none;
+    box-shadow: 0 6px 18px rgba(106,88,214,.28);
+    transition: filter .18s ease, transform .18s ease;
+}
+
+/* Small arrow: tells users the link opens a new tab */
+.hub-link::after {
+    content: "↗";
+    font-size: 13px;
+    opacity: .85;
+}
+
+.hub-link:hover,
+.hub-link:focus-visible {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    color: #fff;
+    text-decoration: none;
+    outline: none;
+}
+
+.hub-link:focus-visible {
+    box-shadow: 0 0 0 3px rgba(169,140,255,.45);
+}
+
+@media (max-width: 600px) {
+    .hub-link {
+        display: flex;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 16px;
+        text-align: center;
+    }
+}
+/* ---- B) Tablet (stacked layout, 601–1100px) ----
+   Hero, This Week card and chat share one centred column,
+   and the card keeps the image's 2:1 shape so the artwork
+   is never cropped. */
+@media (min-width: 601px) and (max-width: 1100px) {
+    .page {
+        width: min(100% - 44px, 720px);
+    }
+
+    .intro {
+        max-width: none;
+        padding-left: 0;
+    }
+
+    .week-card {
+        min-height: 0;
+        aspect-ratio: 2 / 1;
+    }
+}
+</style>
+<style>
+/* =========================================
+   DCC DISPLAY — BATCH 5
+   Main-menu subtitle copy (approved 8 Nov)
+   Scoped: .dcc-main-menu subtitles 4, 5, 6, 8.
+========================================= */
+.hub-menu.dcc-main-menu .hub-option:nth-child(4) > span:last-child::after {
+    content: "Find all DCC forms in one place";
+}
+
+.hub-menu.dcc-main-menu .hub-option:nth-child(5) > span:last-child::after {
+    content: "Ways to give and account details";
+}
+
+.hub-menu.dcc-main-menu .hub-option:nth-child(6) > span:last-child::after {
+    content: "DCC pastors, ministers and department leaders";
+}
+
+.hub-menu.dcc-main-menu .hub-option:nth-child(8) > span:last-child::after {
+    content: "Get in touch with us";
+}
+</style>
+<link rel="stylesheet" href="assets/this-week/this-week.css?v=20261121">
+<link rel="stylesheet" href="assets/giving/giving.css?v=20261120">
+<link rel="stylesheet" href="assets/church/church.css?v=20261121">
 </head>
 <body>
   <div class="page">
@@ -567,28 +1364,23 @@
           <span class="brand-sub">Information Hub</span>
         </span>
       </a>
-      <div class="header-title">
-        <span class="prototype">Prototype</span>
-        Information Hub
-      </div>
+      <div class="header-title">Information Hub</div>
     </header>
 
     <main>
       <section class="intro">
-        <div class="eyebrow">DCC Information Hub</div>
-        <h1>Ask. <span class="accent">Find.</span><br>Connect.</h1>
-        <p>
-          Welcome to the DCC Information Hub. Ask a question about services,
-          events, ministries, forms, locations or anything else you need to know.
-        </p>
-
-        <div class="topics" aria-label="Example topics">
-          <span class="topic">Service times</span>
-          <span class="topic">Events</span>
-          <span class="topic">Ministries</span>
-          <span class="topic">Forms</span>
-          <span class="topic">Locations</span>
-        </div>
+        <div class="hero-rule" aria-hidden="true"></div>
+        <h1>All Things DCC,<br><span class="accent">Right Here.</span></h1>
+        <p>Everything you need to stay connected, informed, and engaged with our church family.</p>
+        <a class="week-card" href="https://canva.link/m8alnjujgkkb0vx" target="_blank" rel="noopener noreferrer" aria-label="Open What’s On at DCC: upcoming events">
+          <span class="week-card-copy">
+            <span class="week-calendar" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none"><rect x="4" y="6" width="24" height="22" rx="3" stroke="currentColor" stroke-width="2.4"/><path d="M10 3.8v5M22 3.8v5M4.5 12h23" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M10 17h3M10 22h3M18 17h4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="week-title">What’s On<br><strong>at DCC</strong></span>
+          </span>
+          <span class="week-art" aria-hidden="true"><span class="week-glow"></span><span class="week-paper"><span class="paper-grid"></span><span class="paper-pin"></span></span></span>
+        </a>
       </section>
 
       <section class="chat-shell" aria-label="Information Hub chatbot">
@@ -596,8 +1388,8 @@
           <div class="bot-id">
             <div class="bot-avatar">D</div>
             <div>
-              <div class="bot-name">DCC Information Hub</div>
-              <div class="bot-status"><span class="online"></span>Starting…</div>
+              <div class="bot-name">DCC</div>
+              <div class="bot-status"><span class="online"></span>Online – here to help</div>
             </div>
           </div>
           <div style="color:#777e99;font-size:18px;">•••</div>
@@ -606,22 +1398,11 @@
         <div class="chat-body">
         </div>
 
-        <div class="input-wrap">
-          <div class="input-box">
-            <input type="text" placeholder="Ask a question about DCC..." aria-label="Ask a question">
-            <button class="send" aria-label="Send question">↑</button>
-          </div>
-          <div class="privacy">Information Hub prototype · Responses will appear here</div>
-        </div>
-      </section>
+        </section>
     </main>
-
-    <footer>
-      <span>David's Christian Centre</span>
-      <span>Information Hub · Prototype</span>
-    </footer>
   </div>
-<script src="dcc-information-hub.js?v=20261009-phase1"></script>
+<script src="assets/this-week/this-week.js?v=20261121b"></script>
+<script src="dcc-information-hub.js?v=20261121c"></script>
 <script>
 (function () {
   function markMainMenu() {

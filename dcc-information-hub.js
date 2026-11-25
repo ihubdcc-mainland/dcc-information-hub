@@ -27,6 +27,7 @@
   data: {},
   events: [],
   worshipCentres: [],
+  forms: [],
   ready: false,
   loading: true,
   awaitingWhatsApp: false,
@@ -99,6 +100,7 @@
   function addBot(html, label = 'Information Hub') {
     const wrap = document.createElement('div');
     wrap.className = 'hub-entry bot-entry';
+    if (label === 'Welcome') wrap.classList.add('welcome');
     wrap.innerHTML = `<div class="welcome-label">${escapeHtml(label)}</div><div class="message">${html}</div>`;
     els.chat.appendChild(wrap);
     scrollChat();
@@ -113,6 +115,12 @@
   }
 
   function scrollChat() {
+    // Every screen is drawn into an empty chat, so start at the top:
+    // the heading and first options must be visible, not the end of the list.
+    els.chat.scrollTop = 0;
+  }
+
+  function scrollChatToLatest() {
     els.chat.scrollTop = els.chat.scrollHeight;
   }
 
@@ -141,7 +149,8 @@
       if (!state.isMainMenu) {
         state.stack.push({
           nodes: Array.from(els.chat.children),
-          isMainMenu: state.isMainMenu
+          isMainMenu: state.isMainMenu,
+          scrollTop: els.chat.scrollTop
         });
       }
 
@@ -161,7 +170,7 @@
 
 async function recordContactEvent(entryPoint, context = null) {
   try {
-    const res = await fetch('https://dcc-information-hub.onrender.com/api/contact-events', {
+    const res = await fetch('/api/contact-events', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -207,7 +216,8 @@ async function recordContactEvent(entryPoint, context = null) {
       () => {
         state.stack.push({
           nodes: Array.from(els.chat.children),
-          isMainMenu: state.isMainMenu
+          isMainMenu: state.isMainMenu,
+          scrollTop: els.chat.scrollTop
         });
 
         els.chat.innerHTML = '';
@@ -244,7 +254,7 @@ async function recordContactEvent(entryPoint, context = null) {
   state.stack = [];
   state.isMainMenu = true;
 
-  addBot('<strong>Welcome! Please choose an option below to get started.</strong>');
+  addBot('<span class="welcome-title">Welcome!</span><span class="welcome-sub">What would you like to know?</span>', 'Welcome');
 
   addMenu([
     {label:'Church Information / Services', action:() => churchMenu()},
@@ -253,7 +263,7 @@ async function recordContactEvent(entryPoint, context = null) {
     {label:'Forms & Registration', action:() => formsMenu()},
     {label:'Giving', action:() => giving()},
     {label:'Pastors & Ministers / Workforce Leaders', action:() => leadershipMenu()},
-    {label:'DCC Schools / Resources', action:() => resourcesMenu()},
+    {label:'Resources', action:() => resourcesMenu()},
     {
   label:'Contact the Team',
   action:() => {
@@ -288,7 +298,8 @@ state.currentContext = null;
 
   state.isMainMenu = previousScreen.isMainMenu;
 
-  scrollChat();
+  // Return to the same place in the previous list (e.g. mid-way down Forms).
+  els.chat.scrollTop = previousScreen.scrollTop || 0;
 }
 
   function faqSection(title) {
@@ -297,24 +308,104 @@ state.currentContext = null;
 
   function churchMenu() {
     addBot('<strong>Church Information & Services</strong><br>What would you like to find out?');
+    const mainland = findCentre('mainland');
+    const island = findCentre('island');
     addMenu([
-      {label:'Mainland — Victory Dome', action:() => branchDetails('Mainland — Victory Dome')},
-      {label:'Island — DCC Lekki', action:() => branchDetails('Island — DCC Lekki')},
+      {label: (mainland && mainland.menu_label) || 'Mainland — Victory Dome', action:() => branchDetails('Mainland')},
+      {label: (island && island.menu_label) || 'Island — DCC Lekki', action:() => branchDetails('Island')},
       {label:'About DCC', action:() => aboutDcc()}
     ]);
     addUtilityButtons();
   }
 
+  // Find a worship centre by its permanent record_id (so renaming a centre,
+  // e.g. after the Mainland move, never breaks the chatbot), falling back to
+  // the older name / alias match.
+  const CENTRE_IDS = {
+    mainland: 'centre_mainland_victory_dome',
+    island: 'centre_island_dcc_lekki'
+  };
+
+  function findCentre(branch) {
+    const centres = Array.isArray(state.worshipCentres) ? state.worshipCentres : [];
+    const key = String(branch).toLowerCase().includes('mainland') ? 'mainland' : 'island';
+    return centres.find(c => c.record_id === CENTRE_IDS[key]) ||
+      centres.find(c => (c.aliases || []).some(a => String(a).toLowerCase() === key)) ||
+      centres.find(c => String(c.name || '').toLowerCase().includes(key)) ||
+      null;
+  }
+
+  function localTodayISO() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function formatLongDate(iso) {
+    const d = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  // Address shown for a centre. A planned move is stored as upcoming_address
+  // (+ optional upcoming_address_effective_from, YYYY-MM-DD). Before that
+  // date the current address is main and the new one is shown as "moving
+  // soon"; from that date the new address is main and the old one is hidden.
+  function centreAddressInfo(centre) {
+    const upcoming = String(centre.upcoming_address || '').trim();
+    const from = String(centre.upcoming_address_effective_from || '').trim();
+    const moved = Boolean(upcoming && from && localTodayISO() >= from);
+    return {
+      main: moved ? upcoming : centre.address,
+      upcoming: moved ? '' : upcoming,
+      from: moved ? '' : from
+    };
+  }
+
+  // ---- Church Information screens (branch details, About DCC) ----
+  const CI_ICONS = {
+    pin: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 6.1 11.3 6.4 11.6a.85.85 0 0 0 1.2 0C12.9 20.8 19 14.6 19 9.5a7 7 0 0 0-7-7Zm0 9.6a2.6 2.6 0 1 1 0-5.2 2.6 2.6 0 0 1 0 5.2Z"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 3.2c.5-.5 1.3-.5 1.8 0l2.2 2.3c.5.5.5 1.2.1 1.7L9.4 8.8a12 12 0 0 0 5.8 5.8l1.6-1.3c.5-.4 1.3-.4 1.7.1l2.3 2.2c.5.5.5 1.3 0 1.8l-1.5 1.5c-.9.9-2.2 1.2-3.4.8A18.6 18.6 0 0 1 4.3 8.1c-.4-1.2-.1-2.5.8-3.4l1.5-1.5Z"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.6"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.4h.01M12 17.4h.01"/></svg>',
+    megaphone: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.5 4.2v13.6a.8.8 0 0 1-1.2.7l-4.6-2.9H8.2l.9 4a1 1 0 0 1-1 1.2H6.6a1 1 0 0 1-1-.8l-1-4.4A3.6 3.6 0 0 1 5.4 8h7.3l4.6-2.9a.8.8 0 0 1 1.2.7ZM20.2 9.2a.75.75 0 0 1 1.05 0 3.8 3.8 0 0 1 0 5.3.75.75 0 1 1-1.05-1.06 2.3 2.3 0 0 0 0-3.2.75.75 0 0 1 0-1.04Z"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19Zm1.2 14.3a1.2 1.2 0 0 1-2.4 0v-5.3a1.2 1.2 0 0 1 2.4 0v5.3ZM12 9a1.4 1.4 0 1 1 0-2.8A1.4 1.4 0 0 1 12 9Z"/></svg>',
+    people: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.3" r="3.1"/><circle cx="5.6" cy="9" r="2.3"/><circle cx="18.4" cy="9" r="2.3"/><path d="M12 11.6c3.1 0 5.6 2.1 5.6 4.7v1.3c0 .6-.5 1-1 1H7.4c-.5 0-1-.4-1-1v-1.3c0-2.6 2.5-4.7 5.6-4.7ZM5.2 12.6c.4 0 .7 0 1 .1a6 6 0 0 0-1.3 3.6v1.3H2.3c-.4 0-.8-.3-.8-.8v-.9c0-1.8 1.6-3.3 3.7-3.3ZM18.8 12.6c2.1 0 3.7 1.5 3.7 3.3v.9c0 .5-.4.8-.8.8h-2.6v-1.3a6 6 0 0 0-1.3-3.6c.3-.1.6-.1 1-.1Z"/></svg>',
+    book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.2C10 4.8 7.3 4.4 4 4.8v13.4c3.3-.4 6 0 8 1.4 2-1.4 4.7-1.8 8-1.4V4.8c-3.3-.4-6 0-8 1.4Z"/><path d="M12 6.2v13.4"/></svg>',
+    sprout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8.5"/><path d="M12 12.5C12 8 8.8 5.5 4.5 5.5c0 4.3 3 7 7.5 7Z"/><path d="M12 12.5c0-4.5 3.2-7 7.5-7 0 4.3-3 7-7.5 7Z"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>'
+  };
+
+  function ciCard(icon, title, bodyHtml, extraClass = '') {
+    return `<section class="ci-card${extraClass ? ' ' + extraClass : ''}">` +
+      `<span class="ci-icon">${CI_ICONS[icon]}</span>` +
+      `<div class="ci-body"><h3 class="ci-label">${escapeHtml(title)}</h3>${bodyHtml}</div></section>`;
+  }
+
+  function ciHeader(icon, title) {
+    return `<div class="ci-head"><span class="ci-head-icon">${CI_ICONS[icon]}</span>` +
+      `<h2 class="ci-title">${escapeHtml(title)}</h2></div>`;
+  }
+
+  function directionsLink(address, label) {
+    const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(address);
+    return `<a class="ci-action" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">` +
+      `${escapeHtml(label)}${CI_ICONS.arrow}</a>`;
+  }
+
+  function telHref(phone) {
+    return 'tel:' + String(phone).replace(/[^\d+]/g, '');
+  }
+
+  // Times always shown as "7:00 AM" (never "7 AM") so lists read evenly.
+  function formatClockTime(value) {
+    if (!value) return '';
+    const [hour, minute] = String(value).split(':').map(Number);
+    if (!Number.isFinite(hour)) return String(value);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    return `${hour % 12 || 12}:${String(minute || 0).padStart(2, '0')} ${period}`;
+  }
+
   function branchDetails(which) {
-  const isMainland = which.includes('Mainland');
-
-  const centre = state.worshipCentres.find(c => {
-    if (isMainland) {
-      return c.name === 'DCC Mainland (Victory Dome)';
-    }
-
-    return c.name === 'DCC Island (DCC Lekki)';
-  });
+  const centre = findCentre(which);
 
   if (!centre) {
     addBot('<strong>Branch information unavailable.</strong><br>I could not find this worship centre in the DCC Information Hub database.');
@@ -322,57 +413,60 @@ state.currentContext = null;
     return;
   }
 
-  let html = `<strong>${escapeHtml(centre.name)}</strong>`;
+  const address = centreAddressInfo(centre);
+  let html = '<div class="ci">' + ciHeader('pin', centre.name);
 
-  if (centre.address) {
-    html += `<div class="md-result"><strong>Address:</strong><br>${escapeHtml(centre.address)}</div>`;
+  if (address.main) {
+    html += ciCard('pin', 'Address',
+      `<p>${escapeHtml(address.main)}</p>` + directionsLink(address.main, 'Get directions'));
+  }
+
+  if (address.upcoming) {
+    const when = address.from ? formatLongDate(address.from) : '';
+    html += ciCard('megaphone', 'Moving soon',
+      `<p>${when ? `From ${escapeHtml(when)}, this centre moves to its new location:` : 'This centre will soon move to its new location:'}</p>` +
+      `<p class="ci-strong">${escapeHtml(address.upcoming)}</p>` +
+      directionsLink(address.upcoming, 'Directions to the new site'),
+      'ci-card--notice');
   }
 
   if (Array.isArray(centre.phones) && centre.phones.length) {
-    html += `<div class="md-result"><strong>Phone:</strong> ${centre.phones.map(escapeHtml).join(' / ')}</div>`;
+    html += ciCard('phone', 'Phone',
+      '<ul class="ci-phones">' +
+      centre.phones.map(phone =>
+        `<li><a href="${escapeHtml(telHref(phone))}" aria-label="Call ${escapeHtml(phone)}">${escapeHtml(phone)}</a></li>`
+      ).join('') +
+      '</ul>');
   }
 
   if (Array.isArray(centre.services) && centre.services.length) {
-    html += `<div class="md-result"><strong>Service Times</strong><br>`;
-
-    centre.services.forEach(service => {
-      const formatServiceTime = (timeValue) => {
-  if (!timeValue) return '';
-
-  const [hour, minute] = timeValue.split(':').map(Number);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-
-  return minute === 0
-    ? `${displayHour} ${period}`
-    : `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
-};
-
-let time = formatServiceTime(service.start_time);
-
-if (service.end_time) {
-  time += ` – ${formatServiceTime(service.end_time)}`;
-}
-
-      html += `${escapeHtml(service.day)} — ${escapeHtml(service.label)}: ${escapeHtml(time)}<br>`;
-    });
-
-    html += `</div>`;
+    html += ciCard('calendar', 'Service Times',
+      '<ul class="ci-times">' +
+      centre.services.map(service => {
+        let time = formatClockTime(service.start_time);
+        if (service.end_time) time += ` – ${formatClockTime(service.end_time)}`;
+        return `<li><span class="ci-day">${escapeHtml(service.day)}</span> ` +
+          `<span class="ci-service">${escapeHtml(service.label)}</span> ` +
+          `<span class="ci-time">${escapeHtml(time)}</span></li>`;
+      }).join('') +
+      '</ul>');
   }
 
+  html += '</div>';
   addBot(html);
   addUtilityButtons();
 }
 
   function aboutDcc() {
     const html =
-      `<div class="md-result">` +
-      `Welcome to David’s Christian Centre, which we fondly call DCC. We are the home of victorious people, and we are deeply committed to raising a victorious community by schooling and training everyone through the Word of Faith into a life of 100% victory, 100% of the time.` +
-      `<br><br>` +
-      `We get our name from a simple yet powerful scripture, <strong>(1 Chronicles 18:6b)</strong>: just as David never lost a battle, God's walk with us will be the exact same. Everything we do is built around raising victorious people through the Word of Faith and on taking Bible-based principles and actually living them out day by day in our everyday lives.` +
-      `<br><br>` +
-      `Our ministry began in a parlor in 1996, when one man chose to heed God's call to serve. In September 2026, we celebrated our 30th anniversary. We are so glad you are here to learn more about who we are.` +
-      `</div>`;
+      '<div class="ci">' + ciHeader('info', 'About DCC') +
+      ciCard('people', 'Who We Are',
+        `<p>Welcome to David’s Christian Centre, which we fondly call DCC. We are the home of victorious people, and we are deeply committed to raising a victorious community by schooling and training everyone through the Word of Faith into a life of 100% victory, 100% of the time.</p>`) +
+      ciCard('book', 'Our Foundation',
+        `<p>We get our name from a simple yet powerful scripture, <strong>(1 Chronicles 18:6b)</strong>: just as David never lost a battle, God's walk with us will be the exact same. Everything we do is built around raising victorious people through the Word of Faith and on taking Bible-based principles and actually living them out day by day in our everyday lives.</p>`) +
+      ciCard('sprout', 'Our Journey',
+        `<p>Our ministry began in a parlor in 1996, when one man chose to heed God's call to serve. In September 2026, we celebrated our 30th anniversary. We are so glad you are here to learn more about who we are.</p>`) +
+      '</div>';
     addBot(html);
     addUtilityButtons();
   }
@@ -386,220 +480,351 @@ if (service.end_time) {
   function extractHeadings(file, level = 3) {
     return parseSections(state.data[file] || '').filter(s => s.level === level);
   }
+  
 
-  function parseForms() {
-    return extractHeadings('03-forms-registration.md', 3)
-      .filter(s => /^\d+\./.test(s.title))
-      .map(s => {
-        const title = s.title.replace(/^\d+\.\s*/, '');
-        const body = s.lines.join('\n');
-        const url = (body.match(/https?:\/\/\S+/) || [])[0] || '';
-        return {title, section:s, url:url.replace(/[)>.,]+$/g,'')};
-      });
-  }
+function formsMenu() {
+  const forms = [...(state.forms || [])]
+    .filter(form =>
+      form.status === 'active' &&
+      form.name &&
+      form.form_id &&
+      form.link &&
+      form.button_label
+    )
+    .sort((a, b) => a.menu_order - b.menu_order);
 
-  function formsMenu() {
-    const forms = parseForms();
-    addBot('<strong>Forms & Registration</strong><br>Select the form you need.');
-    addMenu(forms.map(f => ({label:f.title, action:() => formDetails(f.title)})));
-    addUtilityButtons();
-  }
-
-function getFormMessage(title) {
-  const t = title.toLowerCase();
-
-  if (t.includes('interest group')) {
-    return {
-      message:
-        'Click the button below to register for an interest group.',
-      button:
-        'Register'
-    };
-  }
-
-  if (t.includes('first timer')) {
-    return {
-      message:
-        'Welcome to David’s Christian Centre. Please click the button below to fill the form, and a member of our team will reach out to welcome you warmly.',
-      button:
-        'Fill Welcome Form'
-    };
-  }
-
-  if (t.includes('child naming')) {
-    return {
-      message:
-        'Congratulations on the safe arrival of your baby! Please click the button below to complete the child naming form.',
-      button:
-        'Complete Naming Form'
-    };
-  }
-
-  if (t.includes('facility usage')) {
-    return {
-      message:
-        'Please click the button below to submit your facility usage request.',
-      button:
-        'Submit Facility Request'
-    };
-  }
-
-  return {
-    message:
-      'Please click the button below to complete this form.',
-    button:
-      'Complete Form'
-  };
-}
-
-function getFormMessage(title) {
-  const t = title.toLowerCase();
-
-  if (t.includes('interest group')) {
-    return {
-      message: 'Click the button below to register for an interest group.',
-      button: 'Register'
-    };
-  }
-
-  if (t.includes('first timer')) {
-    return {
-      message: 'Welcome to David’s Christian Centre. Please click the button below to fill the form, and a member of our team will reach out to welcome you warmly.',
-      button: 'Fill Welcome Form'
-    };
-  }
-
-  if (t.includes('child naming')) {
-    return {
-      message: 'Congratulations on the safe arrival of your baby! Please click the button below to complete the child naming form.',
-      button: 'Complete Naming Form'
-    };
-  }
-
-  if (t.includes('facility usage')) {
-    return {
-      message: 'Please click the button below to submit your facility usage request.',
-      button: 'Submit Facility Request'
-    };
-  }
-
-  return {
-    message: 'Please click the button below to complete this form.',
-    button: 'Complete Form'
-  };
-}
-
-function extractDeadlineNote(text) {
-  const cleaned = cleanMarkdown(text);
-
-  // First, look specifically for an explicit "Deadline:" field.
-  const deadlineMatch = cleaned.match(
-    /\bdeadline\s*:\s*(.*?)(?=[.\n]|$)/i
+  addBot(
+    '<strong>Forms & Registration</strong><br>' +
+    'Select the form you need.'
   );
 
-  if (deadlineMatch) {
-    let note = deadlineMatch[1]
-      .replace(/\*\*/g, '')
-      .trim();
-
-    // Ignore placeholders such as:
-    // "Not stated."
-    // "Not stated on the accessible page."
-    // "N/A."
-    // "None."
-    // etc.
-    if (
-      /^(not stated|none|n\/a|na|not applicable|nil|none stated)\b/i.test(note)
-    ) {
-      return '';
-    }
-
-    if (/^must be filled/i.test(note)) {
-      note = note.replace(
-        /^must be filled/i,
-        'You must fill this form'
-      );
-    }
-
-    return note;
-  }
-
-  // If there is no explicit "Deadline:" field,
-  // look for other natural deadline wording.
-  const sentences = cleaned
-    .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
-    .filter(Boolean);
-
-  const deadlineSentence = sentences.find(sentence =>
-    /\b(must be (made|submitted|received|completed|filled)|submit(?:ted)?\s+(?:by|before)|no later than|at least \d+\s+(?:days?|weeks?|hours?)|before the (?:event|date)|prior to)\b/i.test(sentence)
-  );
-
-  if (!deadlineSentence) {
-    return '';
-  }
-
-  let note = deadlineSentence
-    .replace(/^[-•*]\s*/, '')
-    .replace(/\*\*/g, '')
-    .trim();
-
-  if (/^must be filled/i.test(note)) {
-    note = note.replace(
-      /^must be filled/i,
-      'You must fill this form'
+  if (!forms.length) {
+    addBot(
+      'Forms are temporarily unavailable. Please try again later.'
     );
+    addUtilityButtons();
+    return;
   }
 
-  return note;
-}
-
-  function formDetails(title) {
-  const form = parseForms().find(
-    f => f.title.toLowerCase() === title.toLowerCase()
-  ) || parseForms().find(
-    f => f.title.toLowerCase().includes(title.toLowerCase())
+  addMenu(
+    forms.map(form => ({
+      label: form.name,
+      action: () => formDetails(form.form_id)
+    }))
   );
 
-  if (!form) return missing();
+  addUtilityButtons();
+}
+  
 
-  const text = sectionText(form.section);
-  const presentation = getFormMessage(form.title);
-  const deadline = extractDeadlineNote(text);
+function formDetails(formId) {
+  const form = (state.forms || []).find(
+    item => item.form_id === formId
+  );
+
+  if (!form) {
+    return missing();
+  }
+
+  const purpose = (form.purpose || '').trim();
+  const deadlineRule = (form.deadline_rule || '').trim();
+
+  const noDeadline =
+    /^(not stated(?: on the accessible page)?|none|n\/a|na|not applicable|nil|none stated)\.?$/i;
+
+  const deadline =
+    deadlineRule && !noDeadline.test(deadlineRule)
+      ? deadlineRule
+      : '';
 
   let html =
-    `<strong>${escapeHtml(form.title)}</strong>` +
-    `<div class="md-result">${escapeHtml(presentation.message)}</div>`;
+    `<strong>${escapeHtml(form.name)}</strong>`;
+
+  if (purpose) {
+    html +=
+      `<div class="md-result">${escapeHtml(purpose)}</div>`;
+  }
 
   if (deadline) {
-    html += `<div class="notice"><strong>Note:</strong> ${escapeHtml(deadline)}</div>`;
+    html +=
+      `<div class="notice"><strong>Note:</strong> ` +
+      `${escapeHtml(deadline)}</div>`;
   }
 
-  if (form.url) {
-    html += `<div class="link-row">${link(presentation.button, form.url)}</div>`;
-  }
+  html +=
+    `<div class="link-row">` +
+    `${link(form.button_label, form.link)}` +
+    `</div>`;
 
   addBot(html);
   addUtilityButtons();
-}
+}  
 
-  function giving() {
-    const section = faqSection('Giving');
-    if (!section) return missing();
-    const text = sectionText(section);
-    addBot(`<strong>Giving</strong><div class="md-result">${formatLines(text)}</div><div class="notice">To make sure everything goes smoothly, please check our official giving page for our details before making a transfer.</div><div class="link-row">${link('Open official Giving page','https://www.davidschristiancentre.org/give')}</div>`);
+let givingAccountsCache = null;
+
+async function giving() {
+  try {
+    const response = await fetch('/api/giving-accounts', {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Giving accounts API returned ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (!result.success || !Array.isArray(result.givingAccounts)) {
+      throw new Error('Invalid giving accounts API response');
+    }
+
+    givingAccountsCache = result.givingAccounts.filter(account =>
+      account.bank &&
+      account.account_name &&
+      account.account_number &&
+      account.currency
+    );
+
+    const banks = [
+      ...new Set(givingAccountsCache.map(account => account.bank))
+    ];
+
+    if (!banks.length) {
+      throw new Error('No giving banks are available');
+    }
+
+    addBot(
+      '<strong>Giving</strong><div class="md-result">' +
+      'Choose a bank to view its giving account details.' +
+      '</div>'
+    );
+
+    addMenu(
+      banks.map(bank => ({
+        label: bank,
+        action: () => givingBankDetails(bank)
+      }))
+    );
+
+    addUtilityButtons();
+
+  } catch (error) {
+    console.error('Could not load giving banks:', error);
+
+    addBot(
+      '<strong>Giving information is currently unavailable.</strong><br>' +
+      'Please visit the official DCC giving page for assistance.' +
+      `<div class="link-row">${link(
+        'Open official Giving page',
+        'https://www.davidschristiancentre.org/give'
+      )}</div>`
+    );
+
     addUtilityButtons();
   }
+}
 
-  function parseRoster(kind) {
-    const md = state.data['05-leadership-workforce.md'] || '';
-    const sectionTitle = kind === 'pastors' ? '### Pastors' : '### Ministers';
-    const start = md.indexOf(sectionTitle);
-    if (start < 0) return [];
-    const rest = md.slice(start + sectionTitle.length);
-    const end = rest.search(/^### /m);
-    const block = end >= 0 ? rest.slice(0, end) : rest;
-    return block.split(/\r?\n/).map(l => l.trim()).filter(l => /^\d+\.\s+/.test(l)).map(l => l.replace(/^\d+\.\s+/,''));
+function givingBankDetails(bankName) {
+  if (!Array.isArray(givingAccountsCache)) {
+    return giving();
+  }
+
+  const accounts = givingAccountsCache
+    .filter(account => account.bank === bankName)
+    .sort((a, b) => {
+  const currencyOrder = {
+    NGN: 1,
+    USD: 2,
+    GBP: 3,
+    EUR: 4
+  };
+
+  return (currencyOrder[a.currency] ?? 99) -
+         (currencyOrder[b.currency] ?? 99);
+});
+
+  if (!accounts.length) {
+    addBot(
+      '<strong>No account details found for this bank.</strong>'
+    );
+    addUtilityButtons();
+    return;
+  }
+
+  const brand = givingBrand(bankName);
+  const displayName = brand ? brand.name : bankName;
+
+  // Account details all accounts share (e.g. one SWIFT/BIC and sort code
+  // for every foreign-currency account) are shown once, under the list.
+  const swiftCodes = [...new Set(accounts.map(a => a.swift_bic).filter(Boolean))];
+  const sortCodes = [...new Set(accounts.map(a => a.sort_code).filter(Boolean))];
+  const sharedSwift = swiftCodes.length === 1 ? swiftCodes[0] : '';
+  const sharedSort = sortCodes.length === 1 ? sortCodes[0] : '';
+
+  let html = '<div class="gv">';
+
+  html += '<div class="gv-head">';
+  if (brand) {
+    html +=
+      `<span class="gv-logo${brand.fullTile ? ' gv-logo--full' : ''}">` +
+      `<img src="assets/giving/${brand.logo}" alt="" width="56" height="56"></span>` +
+      '<span class="gv-divider" aria-hidden="true"></span>';
+  }
+  html += `<span class="gv-name">${escapeHtml(displayName)}</span></div>`;
+
+  html += '<div class="gv-list">';
+  for (const account of accounts) {
+    const currency = String(account.currency).toUpperCase();
+    const number = String(account.account_number);
+    html += '<div class="gv-acct">';
+    html += `<span class="gv-cur">${escapeHtml(currency)}</span>`;
+    html += '<div class="gv-info">';
+    html += `<div><strong>Account Name:</strong> ${escapeHtml(account.account_name)}</div>`;
+    html += `<div><strong>Account Number:</strong> <span class="gv-number">${escapeHtml(number)}</span></div>`;
+    if (account.swift_bic && !sharedSwift) {
+      html += `<div><strong>SWIFT/BIC:</strong> ${escapeHtml(account.swift_bic)}</div>`;
+    }
+    if (account.sort_code && !sharedSort) {
+      html += `<div><strong>Sort Code:</strong> ${escapeHtml(account.sort_code)}</div>`;
+    }
+    html += '</div>';
+    html +=
+      `<button type="button" class="gv-copy" data-copy="${escapeHtml(number)}" ` +
+      `aria-label="Copy ${escapeHtml(currency)} account number ${escapeHtml(number)}" ` +
+      `title="Copy account number">${GIVING_ICON_COPY}</button>`;
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if (sharedSwift || sharedSort) {
+    html += `<div class="gv-codes">${GIVING_ICON_INFO}<div class="gv-codes-text">`;
+    if (sharedSwift) html += `<span><strong>SWIFT/BIC:</strong> ${escapeHtml(sharedSwift)}</span>`;
+    if (sharedSwift && sharedSort) html += '<span class="gv-sep" aria-hidden="true"></span>';
+    if (sharedSort) html += `<span><strong>Sort Code:</strong> ${escapeHtml(sharedSort)}</span>`;
+    html += '</div></div>';
+  }
+
+  // The currency reminder only matters when this bank lists more than
+  // local (NGN) accounts.
+  const hasForeignCurrency = accounts.some(
+    account => String(account.currency).toUpperCase() !== 'NGN'
+  );
+
+  html +=
+    `<div class="gv-note">${GIVING_ICON_INFO}<p>` +
+    (hasForeignCurrency
+      ? 'Please use the account details for the currency you wish to give in. '
+      : '') +
+    'Verify the details on the official DCC giving page before making a transfer.' +
+    '</p></div>';
+
+  html +=
+    `<div class="link-row">${link(
+      'Open official Giving page',
+      'https://www.davidschristiancentre.org/give'
+    )}</div>`;
+
+  html += '<span class="gv-live" aria-live="polite"></span>';
+  html += '</div>';
+
+  addBot(html);
+
+  const blocks = els.chat.querySelectorAll('.gv');
+  const block = blocks[blocks.length - 1];
+  if (block) {
+    block.querySelectorAll('.gv-copy').forEach(button => {
+      button.addEventListener('click', () => copyAccountNumber(button, block));
+    });
+  }
+
+  addUtilityButtons();
+}
+
+// Bank logos (assets/giving) and display names, matched on the bank name
+// stored in the database. A bank not listed here shows its name only.
+const GIVING_BRANDS = [
+  { match: /\bgt|guaranty/i, logo: 'gtco.webp', name: 'GTBank', fullTile: true },
+  { match: /\buba\b|united bank/i, logo: 'uba.webp', name: 'United Bank for Africa' },
+  { match: /fidelity/i, logo: 'fidelity.webp', name: 'Fidelity Bank' },
+  { match: /vfd/i, logo: 'vfd.webp', name: 'VFD Microfinance Bank' }
+];
+
+function givingBrand(bankName) {
+  return GIVING_BRANDS.find(brand => brand.match.test(String(bankName))) || null;
+}
+
+const GIVING_ICON_COPY =
+  '<svg class="gv-icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.4"/><path d="M15.5 8.5V6.4A2.4 2.4 0 0 0 13.1 4H6.4A2.4 2.4 0 0 0 4 6.4v6.7a2.4 2.4 0 0 0 2.4 2.4h2.1"/></svg>' +
+  '<svg class="gv-icon-done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+
+const GIVING_ICON_INFO =
+  '<svg class="gv-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M12 11v5.5"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/></svg>';
+
+async function copyAccountNumber(button, block) {
+  const number = button.dataset.copy || '';
+  let copied = false;
+
+  try {
+    await navigator.clipboard.writeText(number);
+    copied = true;
+  } catch (error) {
+    // Older browsers / non-secure pages: fall back to a temporary text box.
+    const box = document.createElement('textarea');
+    box.value = number;
+    box.setAttribute('readonly', '');
+    box.style.position = 'fixed';
+    box.style.opacity = '0';
+    document.body.appendChild(box);
+    box.select();
+    try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+    box.remove();
+  }
+
+  const live = block.querySelector('.gv-live');
+  if (copied) {
+    button.classList.add('is-copied');
+    button.setAttribute('title', 'Copied');
+    if (live) live.textContent = `Account number ${number} copied.`;
+    clearTimeout(button._copyTimer);
+    button._copyTimer = setTimeout(() => {
+      button.classList.remove('is-copied');
+      button.setAttribute('title', 'Copy account number');
+    }, 1800);
+  } else if (live) {
+    live.textContent = 'Could not copy. Please copy the number manually.';
+  }
+}
+
+  let peopleRosterCache = null;
+  let leadershipAssignmentsCache = null;
+
+  async function loadPeopleRosterData() {
+    if (peopleRosterCache && leadershipAssignmentsCache) {
+      return { people: peopleRosterCache, assignments: leadershipAssignmentsCache };
+    }
+
+    const [peopleResponse, assignmentsResponse] = await Promise.all([
+      fetch('/api/people', { cache: 'no-store' }),
+      fetch('/api/leadership-assignments', { cache: 'no-store' })
+    ]);
+
+    if (!peopleResponse.ok || !assignmentsResponse.ok) {
+      throw new Error('People or leadership assignments API request failed');
+    }
+
+    const [peopleResult, assignmentsResult] = await Promise.all([
+      peopleResponse.json(),
+      assignmentsResponse.json()
+    ]);
+
+    if (!peopleResult.success || !Array.isArray(peopleResult.people) ||
+        !assignmentsResult.success || !Array.isArray(assignmentsResult.assignments)) {
+      throw new Error('Invalid people or leadership assignments API response');
+    }
+
+    peopleRosterCache = peopleResult.people;
+    leadershipAssignmentsCache = assignmentsResult.assignments;
+    return { people: peopleRosterCache, assignments: leadershipAssignmentsCache };
   }
 
   function leadershipMenu() {
@@ -632,89 +857,163 @@ function extractDeadlineNote(text) {
   addUtilityButtons();
 }
   
-  function parseWorkforceDepartments(branch) {
-    const md = state.data['05-leadership-workforce.md'] || '';
-    const sectionHeading = `## ${branch} departments`;
-    const sectionStart = md.indexOf(sectionHeading);
+let workforceDepartmentsCache = null;
 
-    if (sectionStart < 0) return [];
+async function parseWorkforceDepartments(branch) {
+  if (!workforceDepartmentsCache) {
+    try {
+      const response = await fetch('/api/departments');
 
-    const nextSection = md.indexOf('\n## ', sectionStart + sectionHeading.length);
-    const sectionText = md.slice(
-      sectionStart + sectionHeading.length,
-      nextSection >= 0 ? nextSection : md.length
-    );
-    const headings = [...sectionText.matchAll(/^###\s+(.+?)\s*$/gm)];
-
-    return headings.map((heading, index) => {
-      const bodyStart = heading.index + heading[0].length;
-      const bodyEnd = index + 1 < headings.length ? headings[index + 1].index : sectionText.length;
-      const body = sectionText.slice(bodyStart, bodyEnd);
-      const assignments = [];
-
-      for (const line of body.split(/\r?\n/)) {
-        const match = line.match(/^\s*[-*]\s*\*\*(HOD|Assistant HOD):\*\*\s*(.*?)\s*$/i);
-        if (match) {
-          assignments.push({
-            role: match[1].toLowerCase() === 'hod' ? 'HOD' : 'Assistant HOD',
-            name: match[2].trim() || 'Not available'
-          });
-        }
+      if (!response.ok) {
+        throw new Error(`Departments API returned ${response.status}`);
       }
 
-      return { name: heading[1].trim(), assignments };
+      const result = await response.json();
+
+      if (!result.success || !Array.isArray(result.departments)) {
+        throw new Error('Invalid departments API response');
+      }
+
+      workforceDepartmentsCache = result.departments;
+    } catch (error) {
+      console.error('Failed to load departments:', error);
+      return [];
+    }
+  }
+
+  return workforceDepartmentsCache
+    .filter(department =>
+      department.centre?.toLowerCase() === branch.toLowerCase() &&
+      department.status === 'active'
+    )
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(department => {
+      const assignments = [];
+
+      assignments.push({
+        role: 'HOD',
+        name: department.hod?.name || 'Not available'
+      });
+
+      const assistants = Array.isArray(department.assistant_hods)
+        ? department.assistant_hods
+        : [];
+
+      if (assistants.length) {
+        assistants.forEach(assistant => {
+          assignments.push({
+            role: 'Assistant HOD',
+            name: assistant?.name || 'Not available'
+          });
+        });
+      } else {
+        assignments.push({
+          role: 'Assistant HOD',
+          name: 'Not available'
+        });
+      }
+
+      return {
+        name: department.name,
+        assignments
+      };
     });
-  }
+}
 
-  function workforceDepartments(branch) {
-    const departments = parseWorkforceDepartments(branch);
+async function workforceDepartments(branch) {
+  const departments = await parseWorkforceDepartments(branch);
 
-    if (!departments.length) {
-      addBot('<strong>Workforce department information unavailable.</strong><br>I could not find the department list in the current knowledge base.');
-      addUtilityButtons();
-      return;
-    }
-
-    addBot(`<strong>DCC ${escapeHtml(branch)} Workforce Leaders</strong><br>Select a department to view its HOD and Assistant HOD assignments.`);
-    addMenu(departments.map(department => ({
-      label: department.name,
-      action: () => workforceDepartmentDetails(branch, department.name)
-    })));
+  if (!departments.length) {
+    addBot(
+      '<strong>Workforce department information unavailable.</strong><br>' +
+      'The department list could not be loaded. Please try again later.'
+    );
     addUtilityButtons();
+    return;
   }
 
-  function workforceDepartmentDetails(branch, departmentName) {
-    const department = parseWorkforceDepartments(branch)
-      .find(item => item.name === departmentName);
+  addBot(
+    `<strong>DCC ${escapeHtml(branch)} Workforce Leaders</strong><br>` +
+    'Select a department to view its HOD and Assistant HOD assignments.'
+  );
 
-    if (!department) {
-      addBot('<strong>Department information unavailable.</strong>');
-      addUtilityButtons();
-      return;
-    }
+  addMenu(departments.map(department => ({
+    label: department.name,
+    action: () => workforceDepartmentDetails(branch, department.name)
+  })));
 
-    const assignments = department.assignments.length
-      ? department.assignments
-      : [
-          { role: 'HOD', name: 'Not available' },
-          { role: 'Assistant HOD', name: 'Not available' }
-        ];
+  addUtilityButtons();
+}
 
-    const list = assignments.map(item =>
-      `<li><strong>${escapeHtml(item.role)}:</strong> ${escapeHtml(item.name || 'Not available')}</li>`
-    ).join('');
+async function workforceDepartmentDetails(branch, departmentName) {
+  const departments = await parseWorkforceDepartments(branch);
 
-    addBot(`<strong>${escapeHtml(department.name)}</strong><div class="md-result"><ol>${list}</ol></div>`);
+  const department = departments.find(
+    item => item.name === departmentName
+  );
+
+  if (!department) {
+    addBot('<strong>Department information unavailable.</strong>');
     addUtilityButtons();
+    return;
   }
 
-  function rosterView(kind, count = null) {
-    const roster = parseRoster(kind);
-    if (!roster.length) return missing();
-    const shown = count ? roster.slice(0,count) : roster;
+  const list = department.assignments.map(item =>
+    `<li><strong>${escapeHtml(item.role)}:</strong> ` +
+    `${escapeHtml(item.name || 'Not available')}</li>`
+  ).join('');
+
+  addBot(
+    `<strong>${escapeHtml(department.name)}</strong>` +
+    `<div class="md-result"><ol>${list}</ol></div>`
+  );
+
+  addUtilityButtons();
+}
+
+  async function rosterView(kind, count = null) {
     const title = kind === 'pastors' ? 'Pastors' : 'Ministers';
-    addBot(`<strong>${escapeHtml(title)}</strong><div class="md-result"><ol>${shown.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ol></div>${count ? `<div class="muted-note">Showing ${count} from the official roster.</div>`:''}`);
-    addUtilityButtons();
+    try {
+      const { people, assignments } = await loadPeopleRosterData();
+      const expectedTitle = kind === 'pastors' ? 'pastor' : 'minister';
+      const roster = people
+        .filter(person => String(person.roster_status || '').toLowerCase() === 'current' &&
+          String(person.ministerial_title || '').toLowerCase() === expectedTitle)
+        // Rank order from the church office (people.roster_order); anyone
+        // without a number is listed after, alphabetically.
+        .sort((a, b) => {
+          const orderA = Number.isFinite(Number(a.roster_order)) && a.roster_order !== null ? Number(a.roster_order) : Number.MAX_SAFE_INTEGER;
+          const orderB = Number.isFinite(Number(b.roster_order)) && b.roster_order !== null ? Number(b.roster_order) : Number.MAX_SAFE_INTEGER;
+          if (orderA !== orderB) return orderA - orderB;
+          return String(a.display_name || '').localeCompare(String(b.display_name || ''));
+        });
+
+      if (!roster.length) {
+        addBot(`No ${escapeHtml(title.toLowerCase())} are currently listed.`);
+        addUtilityButtons();
+        return;
+      }
+
+      const shown = count ? roster.slice(0, count) : roster;
+      const cards = shown.map(person => {
+        const personAssignments = assignments.filter(item => item.person_id === person.person_id);
+        const positionLines = personAssignments.map(item => {
+          const role = String(item.role || '').trim();
+          const branch = String(item.centre || item.branch || item.scope || '').trim();
+          const position = [role, branch].filter(Boolean).join(' — ');
+          return position ? `<div class="leadership-card-position"><strong>Position:</strong> ${escapeHtml(position)}</div>` : '';
+        }).filter(Boolean).join('');
+
+        return `<article class="leadership-card"><div class="leadership-card-name">${escapeHtml(kind === 'pastors' ? 'Pastor' : 'Minister')} ${escapeHtml(person.display_name || 'Name not available')}</div>${positionLines}</article>`;
+      }).join('');
+
+      addBot(`<strong>${escapeHtml(title)}</strong><div class="leadership-roster">${cards}</div>${count ? `<div class="muted-note">Showing ${shown.length} of ${roster.length}.</div>` : ''}`);
+      addUtilityButtons();
+    } catch (error) {
+      console.error(`Failed to load ${title.toLowerCase()} roster:`, error);
+      addBot(`Sorry, the ${escapeHtml(title.toLowerCase())} list could not be loaded right now. Please try again shortly.`);
+      addUtilityButtons();
+    }
   }
 
   function leadershipAssignments() {
@@ -729,144 +1028,217 @@ function extractDeadlineNote(text) {
   function eventsMenu() {
   const events = getUpcomingEvents();
 
-  const fixedEvents = [
-    {
-      label: 'All Sundays in October 2026',
-      action: () => octoberSundayServices()
-    },
-    {
-      label: 'All Mid-Week Services in October 2026',
-      action: () => octoberMidweekServices()
-    },
-    {
-      label: 'Career Prep 2026',
-      action: () => careerPrep2026()
-    }
-  ];
+  // The "What's On at DCC" button opens the carousel pop-up (assets/this-week).
+  const thisWeek = window.DCCThisWeek;
+  const hasCarousel = Boolean(thisWeek && thisWeek.available());
+  const carouselName = hasCarousel ? thisWeek.name() : '';
+  const thisWeekButton = hasCarousel
+    ? `<div class="link-row"><button type="button" class="hub-link this-week-open">View ${escapeHtml(carouselName)}</button></div>`
+    : '';
 
-  const databaseEvents = events.map(e => ({
-    label: e.title,
-    action: () => eventDetails(e)
-  }));
-
-  addBot(
-    '<strong>Here are the currently scheduled upcoming DCC events.</strong><br>' +
-    'Which event would you like to know more about?'
-  );
-
-  addMenu([...fixedEvents, ...databaseEvents]);
-
-  addUtilityButtons();
-}
-
-  function octoberSundayServices() {
-  addBot(
-    '<strong>All Sundays in October 2026</strong>' +
-    '<div class="md-result">' +
-    '<strong>Topic:</strong> Kingdom Marriage<br><br>' +
-    'The topic for all Sunday sermons in October 2026 is <strong>Kingdom Marriage</strong> for both the Mainland and Island branches.' +
-    '</div>'
-  );
-
-  addUtilityButtons();
-}
-
-  function octoberMidweekServices() {
-  addBot(
-    '<strong>All Mid-Week Services in October 2026</strong>' +
-    '<div class="md-result">' +
-    '<strong>Topic:</strong> The 4 Dimensions of Love<br><br>' +
-    'The topic for all Mid-Week Services in October 2026 is <strong>The 4 Dimensions of Love</strong> for both the Mainland and Island branches.' +
-    '</div>'
-  );
-
-  addUtilityButtons();
-}
-
-  function careerPrep2026() {
-  addBot(
-    '<strong>Career Prep 2026</strong>' +
-    '<div class="md-result">' +
-    '<ol>' +
-    '<li><strong>Theme:</strong> Workplace Evolution</li>' +
-    '<li><strong>5-Day Virtual Training:</strong> 2–6 November, Monday–Friday, 9:00 AM–3:00 PM daily, live via Zoom</li>' +
-    '<li><strong>Career Prep Conference:</strong> Saturday, 7 November at 9:00 AM at DCC Mainland</li>' +
-    '<li><strong>At the Conference:</strong> Keynote speakers, networking session, panel session, certificates, 90-Day Career Action Plan</li>' +
-    '<li><strong>Training Tracks:</strong> Digital Marketing, Business Analysis, Content Creation, Project Management, Data Analytics, Cybersecurity</li>' +
-    '</ol>' +
-    '</div>'
-  );
-
-  addBot(
-    '<div class="link-row">' +
-    link('Register', 'https://luma.com/careerprep2026') +
-    '</div>'
-  );
-
-  addUtilityButtons();
-}
-  
-  function parseDateFromText(text) {
-    const m = text.match(/(?:Date|Dates):\*?\*?\s*(?:[A-Za-z]+\s+)?(\d{1,2})[\s–-]+(?:\d{1,2}\s+)?([A-Za-z]+)\s+(\d{4})/i) ||
-              text.match(/(?:Date|Dates):\*?\*?\s*(?:[A-Za-z]+,?\s+)?(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/i);
-    if (!m) return null;
-    const month = new Date(`${m[2]} 1, ${m[3]}`).getMonth();
-    if (Number.isNaN(month)) return null;
-    return new Date(Number(m[3]), month, Number(m[1]));
+  if (hasCarousel) {
+    addBot(
+      '<strong>Upcoming DCC events</strong><br>' +
+      (events.length
+        ? `Browse ${escapeHtml(carouselName)}, or choose an event below for details.`
+        : 'See everything coming up at DCC.') +
+      thisWeekButton
+    );
+  } else {
+    addBot(
+      '<strong>Here are the currently scheduled upcoming DCC events.</strong><br>' +
+      'Which event would you like to know more about?'
+    );
   }
 
+  const thisWeekOpen = els.chat.querySelector('.this-week-open');
+  if (thisWeekOpen) {
+    thisWeekOpen.addEventListener('click', () => thisWeek.open(1));
+  }
+
+  // With the carousel available there is always something to show,
+  // so the "no upcoming events" message is only used without it.
+  if (!events.length && hasCarousel) {
+    addUtilityButtons();
+    return;
+  }
+
+  if (!events.length) {
+    addBot('There are no upcoming events listed at the moment. Please check again later or contact DCC for updates.');
+    addUtilityButtons();
+    return;
+  }
+
+  addMenu(events.map(event => ({
+    label: event.title,
+    action: () => eventDetails(event)
+  })));
+
+  addUtilityButtons();
+}
+
   function getUpcomingEvents() {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  return state.events
+  return (state.events || [])
     .filter(event => {
-      if (!event.start_date) return false;
-
-      const eventDate = new Date(event.start_date + 'T00:00:00');
-
-      return eventDate >= now && event.status !== 'cancelled';
+      if (!event.start_date || event.status === 'cancelled') return false;
+      const startDate = new Date(`${event.start_date}T00:00:00`);
+      if (Number.isNaN(startDate.getTime())) return false;
+      const endDate = event.end_date
+        ? new Date(`${event.end_date}T23:59:59`)
+        : new Date(`${event.start_date}T23:59:59`);
+      if (Number.isNaN(endDate.getTime())) return false;
+      return endDate >= today;
     })
-    .sort((a, b) => {
-      return new Date(a.start_date) - new Date(b.start_date);
-    })
-    .slice(0, 8);
+    .sort((a, b) => new Date(`${a.start_date}T00:00:00`) - new Date(`${b.start_date}T00:00:00`))
+    .slice(0, 20);
+}
+
+  function formatEventDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+  function formatEventDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+  function formatServiceTime(timeValue) {
+  if (!timeValue) return '';
+  const [hour, minute] = String(timeValue).split(':').map(Number);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return String(timeValue);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return minute === 0
+    ? `${displayHour} ${period}`
+    : `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
+}
+
+  function getMonthlyTopicBranchSchedule(event) {
+  const centres = Array.isArray(state.worshipCentres) ? state.worshipCentres : [];
+  const isMidweek = /mid.?week/i.test(event.title || event.service_period || '');
+  const branchDefinitions = [
+    { label: 'Mainland', centreName: 'DCC Mainland (Victory Dome)' },
+    { label: 'Island', centreName: 'DCC Island (DCC Lekki)' }
+  ];
+
+  return branchDefinitions.map(branch => {
+    const centre = findCentre(branch.label);
+    if (!centre || !Array.isArray(centre.services)) {
+      return { label: branch.label, times: 'Service times unavailable' };
+    }
+
+    const services = centre.services.filter(service => {
+      const day = String(service.day || '').toLowerCase();
+      const serviceLabel = String(service.label || '').toLowerCase();
+      if (isMidweek) {
+        return day === 'tuesday' || day === 'wednesday' ||
+          serviceLabel.includes('mid-week') || serviceLabel.includes('midweek');
+      }
+      return day === 'sunday' || serviceLabel.includes('sunday');
+    });
+
+    const times = services.map(service => {
+      const start = formatServiceTime(service.start_time);
+      const end = formatServiceTime(service.end_time);
+      return start && end ? `${start} – ${end}` : (start || end);
+    }).filter(Boolean);
+
+    return {
+      label: branch.label,
+      times: times.length ? times.join('; ') : 'Service times unavailable'
+    };
+  });
 }
 
   function eventDetails(event) {
+  // Monthly service topics reuse the live worship-centre service data.
+  if (event.event_type === 'monthly_service_topic') {
+    let html = `<strong>Topic: ${escapeHtml(event.topic || event.title || 'Service topic')}</strong>`;
+    const displayDate = event.display_date ||
+      (event.start_date && event.end_date
+        ? `${formatEventDate(event.start_date)} – ${formatEventDate(event.end_date)}`
+        : '');
+
+    if (displayDate) {
+      html += `<div class="md-result"><strong>Date:</strong> ${escapeHtml(displayDate)}</div>`;
+    }
+
+    const branches = getMonthlyTopicBranchSchedule(event);
+    html += `<div class="md-result"><strong>Branch schedule</strong><ul>` +
+      branches.map(branch =>
+        `<li><strong>${escapeHtml(branch.label)}:</strong> ${escapeHtml(branch.times)}</li>`
+      ).join('') +
+      `</ul></div>`;
+
+    if (event.note) html += `<div class="notice">${escapeHtml(event.note)}</div>`;
+    addBot(html);
+    addUtilityButtons();
+    return;
+  }
+
   let html = `<strong>${escapeHtml(event.title || 'DCC Event')}</strong>`;
 
   if (event.start_date) {
-    html += `<div class="md-result"><strong>Date:</strong> ${escapeHtml(event.start_date)}</div>`;
+    const start = formatEventDate(event.start_date);
+    const end = event.end_date && event.end_date !== event.start_date ? formatEventDate(event.end_date) : '';
+    html += `<div class="md-result"><strong>Date:</strong> ${escapeHtml(start)}${end ? ` – ${escapeHtml(end)}` : ''}</div>`;
   }
 
-  if (event.end_date && event.end_date !== event.start_date) {
-    html += `<div class="md-result"><strong>End date:</strong> ${escapeHtml(event.end_date)}</div>`;
+  const hasProgrammeSchedule = Array.isArray(event.schedule) && event.schedule.length > 0;
+  if (event.recurrence && !hasProgrammeSchedule) {
+    const recurrence = typeof event.recurrence === 'string' ? event.recurrence : JSON.stringify(event.recurrence);
+    html += `<div class="md-result"><strong>Schedule:</strong> ${escapeHtml(recurrence)}</div>`;
   }
 
   if (event.start_time) {
     html += `<div class="md-result"><strong>Time:</strong> ${escapeHtml(event.start_time)}`;
-
-    if (event.end_time) {
-      html += ` – ${escapeHtml(event.end_time)}`;
-    }
-
+    if (event.end_time) html += ` – ${escapeHtml(event.end_time)}`;
     html += `</div>`;
   }
 
-  if (event.venue) {
+  if (hasProgrammeSchedule) {
+    const scheduleItems = event.schedule.map(item => {
+      const parts = [];
+      if (item.title) parts.push(`<strong>${escapeHtml(item.title)}:</strong>`);
+      if (item.start_date) {
+        let dateText = formatEventDate(item.start_date);
+        if (item.end_date && item.end_date !== item.start_date) dateText += ` – ${formatEventDate(item.end_date)}`;
+        parts.push(escapeHtml(dateText) + (item.time ? ',' : ''));
+      }
+      if (item.time) parts.push(escapeHtml(item.time));
+      if (item.venue) {
+        const venueText = String(item.venue).replace(/\s+branch$/i, '');
+        parts.push(`at ${escapeHtml(venueText)}${item.format === 'In person' ? ' branch' : ''}`);
+      } else if (item.format) {
+        parts.push(escapeHtml(item.format === 'Virtual' ? 'via Zoom' : item.format));
+      }
+      return `<li>${parts.join(' ')}</li>`;
+    }).join('');
+    html += `<div class="md-result"><strong>Programme schedule</strong><ul>${scheduleItems}</ul></div>`;
+  } else if (event.venue) {
     html += `<div class="md-result"><strong>Venue:</strong> ${escapeHtml(event.venue)}</div>`;
   }
 
-  if (event.audience) {
-    html += `<div class="md-result"><strong>Audience:</strong> ${escapeHtml(event.audience)}</div>`;
+  if (event.speakers) {
+    const speakers = Array.isArray(event.speakers) ? event.speakers.join(', ') : event.speakers;
+    html += `<div class="md-result"><strong>Speakers:</strong> ${escapeHtml(speakers)}</div>`;
   }
 
-  if (event.description) {
-    html += `<div class="md-result">${escapeHtml(event.description)}</div>`;
+  if (event.description) html += `<div class="md-result">${escapeHtml(event.description)}</div>`;
+  if (event.entry_fee) {
+    html += `<div class="md-result"><strong>Entry fee:</strong> ${escapeHtml(typeof event.entry_fee === 'string' ? event.entry_fee : JSON.stringify(event.entry_fee))}</div>`;
   }
-
-  html += `<div class="notice">For cancellation, registration or last-minute logistics, please confirm with DCC.</div>`;
+  if (event.registration_link) html += `<div class="link-row">${link(event.registration_label || 'Register', event.registration_link)}</div>`;
+  if (event.related_site) html += `<div class="link-row">${link('Related website', event.related_site)}</div>`;
+  if (event.note) html += `<div class="notice">${escapeHtml(event.note)}</div>`;
 
   addBot(html);
   addUtilityButtons();
@@ -895,23 +1267,101 @@ function extractDeadlineNote(text) {
     addUtilityButtons();
   }
 
-  function resourcesMenu() {
-    addBot('<strong>DCC Schools / Resources</strong><br>Choose a resource.');
+  let schoolsCache = null;
+  let resourcesCache = null;
+
+  async function loadSchoolsAndResources() {
+    if (Array.isArray(schoolsCache) && Array.isArray(resourcesCache)) {
+      return { schools: schoolsCache, resources: resourcesCache };
+    }
+
+    const [schoolsResponse, resourcesResponse] = await Promise.all([
+      fetch('/api/schools', { cache: 'no-store' }),
+      fetch('/api/resources', { cache: 'no-store' })
+    ]);
+
+    if (!schoolsResponse.ok || !resourcesResponse.ok) {
+      throw new Error('Schools or resources API request failed');
+    }
+
+    const [schoolsResult, resourcesResult] = await Promise.all([
+      schoolsResponse.json(),
+      resourcesResponse.json()
+    ]);
+
+    if (!schoolsResult.success || !Array.isArray(schoolsResult.schools) ||
+        !resourcesResult.success || !Array.isArray(resourcesResult.resources)) {
+      throw new Error('Invalid schools or resources API response');
+    }
+
+    schoolsCache = schoolsResult.schools
+      .filter(school => school && school.name)
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    resourcesCache = resourcesResult.resources
+      .filter(resource => resource && resource.title && resource.url)
+      .sort((a, b) => String(a.title).localeCompare(String(b.title)));
+
+    return { schools: schoolsCache, resources: resourcesCache };
+  }
+
+  async function resourcesMenu() {
+    addBot('<strong>Resources</strong><br>Explore messages and resources to help you grow in the Word of Faith.');
     addMenu([
-      {label:'Audio Messages', action:() => resourceLink('Audio Messages','Click here to listen to audio messages and ministrations from our pastors, ministers, and guest ministers.','https://www.davidschristiancentre.org/resources/audio-messages')},
-      {label:'Podcast', action:() => resourceLink('Podcast','Click here to listen to our podcasts.','https://www.davidschristiancentre.org/resources/podcasts')},
-      {label:'Devotional', action:() => resourceLink('Devotional','Click here to listen to our devotionals.','https://www.davidschristiancentre.org/resources/devotional')},
-      {label:'DCC Online App', action:() => resourceLink('DCC Online App','Click here to download the DCC Online mobile application. Available on Google Play and the Apple App Store.','https://www.davidschristiancentre.org/resources/download-app')},
-      {label:'DCC Schools Website', action:() => resourceLink('DCC Schools Website','Click here to visit the DCC Schools Website.','https://schools.davidschristiancentre.org/')}
+      { label: 'Church Resources', action: () => resourceCatalogueMenu() },
+      { label: 'DCC Schools Website', action: () => resourceLink(
+        'DCC Schools Website',
+        'Visit the official DCC Schools website for more information.',
+        'https://schools.davidschristiancentre.org/'
+      ) }
     ]);
     addUtilityButtons();
   }
 
-  function schoolDetails(title) {
-    const sec = findSection('06-schools-resources.md', title);
-    if (!sec) return missing();
-    addBot(`<strong>${escapeHtml(title)}</strong><div class="md-result">${formatLines(sectionText(sec))}</div><div class="link-row">${link('Open DCC Schools','https://schools.davidschristiancentre.org/')}</div>`);
-    addUtilityButtons();
+  async function resourceCatalogueMenu() {
+    try {
+      const { resources } = await loadSchoolsAndResources();
+      const visibleResources = resources
+        .filter(resource => resource.is_active !== false)
+        .sort((a, b) => {
+          const orderA = Number.isFinite(Number(a.display_order)) ? Number(a.display_order) : Number.MAX_SAFE_INTEGER;
+          const orderB = Number.isFinite(Number(b.display_order)) ? Number(b.display_order) : Number.MAX_SAFE_INTEGER;
+          return orderA - orderB || String(a.title).localeCompare(String(b.title));
+        });
+
+      if (!visibleResources.length) throw new Error('No church resource records are available');
+
+      addBot('<strong>Church Resources</strong><br>Choose a resource to explore.');
+      addMenu(visibleResources.map(resource => ({
+        label: resource.title,
+        action: () => resourceDetails(resource.resource_id)
+      })));
+      addUtilityButtons();
+    } catch (error) {
+      console.error('Could not load church resources:', error);
+      addBot('<strong>Church resources are currently unavailable.</strong><br>Please try again later or visit the official DCC website.');
+      addUtilityButtons();
+    }
+  }
+
+  async function resourceDetails(resourceId) {
+    try {
+      const { resources } = await loadSchoolsAndResources();
+      const resource = resources.find(item => item.resource_id === resourceId && item.is_active !== false);
+      if (!resource) return missing();
+
+      let html = `<strong>${escapeHtml(resource.title)}</strong>`;
+      if (resource.description) {
+        html += `<div class="md-result">${escapeHtml(resource.description)}</div>`;
+      }
+      const buttonLabel = resource.button_label || `Open ${resource.title}`;
+      html += `<div class="link-row">${link(buttonLabel, resource.url)}</div>`;
+      addBot(html);
+      addUtilityButtons();
+    } catch (error) {
+      console.error('Could not load resource details:', error);
+      addBot('<strong>Resource information is currently unavailable.</strong><br>Please try again later.');
+      addUtilityButtons();
+    }
   }
 
   function resourceLink(title, description, url) {
@@ -1126,7 +1576,7 @@ async function submitContactRequest() {
   submitButton.textContent = 'Submitting...';
 
   try {
-    const res = await fetch('https://dcc-information-hub.onrender.com/api/contact-requests', {
+    const res = await fetch('/api/contact-requests', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1160,6 +1610,7 @@ addUtilityButtons();
     );
 
     addUtilityButtons();
+    scrollChatToLatest();
 
   } finally {
     submitButton.disabled = false;
@@ -1237,7 +1688,7 @@ function tokenize(query) {
   }
 
 async function loadEventsFromApi() {
-  const res = await fetch('https://dcc-information-hub.onrender.com/api/events', {
+  const res = await fetch('/api/events', {
     cache: 'no-store'
   });
 
@@ -1259,7 +1710,7 @@ async function loadEventsFromApi() {
 }
 
 async function loadWorshipCentresFromApi() {
-  const res = await fetch('https://dcc-information-hub.onrender.com/api/worship-centres', {
+  const res = await fetch('/api/worship-centres', {
     cache: 'no-store'
   });
 
@@ -1280,29 +1731,48 @@ async function loadWorshipCentresFromApi() {
   return state.worshipCentres;
 }
 
+  
+async function loadFormsFromApi() {
+  const res = await fetch('/api/forms', {
+    cache: 'no-store'
+  });
+
+  if (!res.ok) {
+    throw new Error(`Could not load forms: ${res.status}`);
+  }
+
+  const result = await res.json();
+
+  if (!result.success || !Array.isArray(result.forms)) {
+    throw new Error(result.message || 'Invalid forms response');
+  }
+
+  state.forms = result.forms.filter(
+    form => form.status === 'active' && form.name && form.link
+  );
+
+  console.log('Forms loaded from MongoDB:', state.forms);
+
+  return state.forms;
+}
+
+
   function bind() {
     document.querySelectorAll('.quick').forEach(q => {
       q.setAttribute('role','button'); q.setAttribute('tabindex','0');
-      const label = q.textContent.trim();
+      const label = q.textContent.trim().toLowerCase();
       const fn = () => {
         if (label.includes('services')) navigate('When are the services?', churchMenu);
         else if (label.includes('events')) navigate('What events are coming up?', eventsMenu);
         else if (label.includes('ministry')) navigate('Tell me about a ministry', resourcesMenu);
         else if (label.includes('form')) navigate('Where can I find a form?', formsMenu);
       };
-      q.addEventListener('click', fn); q.addEventListener('keydown', e => {if(e.key==='Enter'||e.key===' ') {e.preventDefault(); fn();}});
+      q.addEventListener('click', fn);
+      q.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
+      });
     });
-    els.send.addEventListener('click', submit);
-    els.input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
   }
-
-  function submit() {
-  const q = els.input.value.trim();
-  if (!q || !state.ready) return;
-  els.input.value = '';
-  addUser(q);
-  answerFreeText(q);
-}
 
   async function init() {
   bind();
@@ -1310,11 +1780,12 @@ async function loadWorshipCentresFromApi() {
   await loadKnowledgeBase();
   await loadEventsFromApi();
   await loadWorshipCentresFromApi();
+  await loadFormsFromApi();
 
   state.ready = true;
     state.loading = false;
 
-    els.status.innerHTML = '<span class="online"></span>Connected to DCC Information Hub';
+    els.status.innerHTML = '<span class="online"></span>Online – here to help';
 
     restart();
   } catch (err) {
