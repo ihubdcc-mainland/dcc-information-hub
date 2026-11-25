@@ -1388,6 +1388,8 @@ async function workforceDepartmentDetails(branch, departmentName) {
 
   function help(fromMainMenu = false) {
   state.awaitingWhatsApp = false;
+  // Remember which screen the visitor asked for help from (shown to the team).
+  state.contactOrigin = fromMainMenu ? 'Main menu' : (state.currentContext || 'Main menu');
 
   addBot(
     '<strong>Contact the Team</strong><br>' +
@@ -1583,7 +1585,7 @@ async function submitContactRequest() {
       ? departmentInput.value.trim()
       : null,
     entry_point: 'whatsapp_form',
-    context: state.currentContext
+    context: state.contactOrigin || state.currentContext
   };
 
   submitButton.disabled = true;

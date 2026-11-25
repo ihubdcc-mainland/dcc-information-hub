@@ -468,6 +468,43 @@ app.post('/api/contact-events', async (req, res) => {
     }
 });
 
+// Sends a new WhatsApp contact request to the IHub Google Sheet script
+// (Google Apps Script web app), which adds a row and emails the team.
+// Optional: does nothing unless CONTACT_SHEET_URL and CONTACT_SHEET_SECRET are set.
+async function notifyContactSheet(contactRequest) {
+    const url = process.env.CONTACT_SHEET_URL;
+    const secret = process.env.CONTACT_SHEET_SECRET;
+    if (!url || !secret) return null;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                secret,
+                name: contactRequest.name,
+                whatsapp_number: contactRequest.whatsapp_number,
+                is_dcc_worker: contactRequest.is_dcc_worker,
+                department: contactRequest.department,
+                context: contactRequest.context,
+                created_at: contactRequest.created_at.toISOString()
+            }),
+            signal: AbortSignal.timeout(20000)
+        });
+        const text = await response.text();
+        let result = null;
+        try { result = JSON.parse(text); } catch (error) { result = null; }
+        if (!response.ok || !result || result.success !== true) {
+            console.error('Contact sheet notification failed:', response.status, text.slice(0, 200));
+            return 'failed';
+        }
+        return 'sent';
+    } catch (error) {
+        console.error('Contact sheet notification failed:', error.message);
+        return 'failed';
+    }
+}
+
 app.post('/api/contact-requests', async (req, res) => {
     try {
         await client.connect();
@@ -556,6 +593,16 @@ app.post('/api/contact-requests', async (req, res) => {
             message: 'Contact request recorded.',
             id: result.insertedId
         });
+
+        // After replying to the visitor, copy the request to the IHub Google
+        // Sheet (which also emails the team). Never affects the visitor.
+        notifyContactSheet(contactRequest).then(status => {
+            if (!status) return;
+            return db.collection('contact_requests').updateOne(
+                { _id: result.insertedId },
+                { $set: { sheet_notification: status, sheet_notified_at: new Date() } }
+            );
+        }).catch(error => console.error('Contact sheet status update failed:', error.message));
 
     } catch (error) {
         console.error(error);
