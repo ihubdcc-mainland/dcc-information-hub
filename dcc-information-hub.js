@@ -1367,7 +1367,7 @@ async function workforceDepartmentDetails(branch, departmentName) {
   function resourceLink(title, description, url) {
     addBot(
       `<strong>${escapeHtml(title)}</strong>` +
-      `<div class="md-result">${escapeHtml(description)}</div>` +
+      (description ? `<div class="md-result">${escapeHtml(description)}</div>` : '') +
       `<div class="link-row">${link(title, url)}</div>`
     );
     addUtilityButtons();
@@ -1390,6 +1390,7 @@ async function workforceDepartmentDetails(branch, departmentName) {
       label:'Official DCC Contact page',
       action:() => resourceLink(
         'DCC Contact page',
+        '',
         'https://www.davidschristiancentre.org/forms/contact'
       )
     }
