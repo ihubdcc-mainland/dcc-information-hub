@@ -28,6 +28,7 @@
   events: [],
   worshipCentres: [],
   forms: [],
+  loadFailed: {},
   ready: false,
   loading: true,
   awaitingWhatsApp: false,
@@ -257,10 +258,10 @@ async function recordContactEvent(entryPoint, context = null) {
   addBot('<span class="welcome-title">Welcome!</span><span class="welcome-sub">What would you like to know?</span>', 'Welcome');
 
   addMenu([
-    {label:'Church Information / Services', action:() => churchMenu()},
-    {label:'Upcoming Events', action:() => eventsMenu()},
+    {label:'Church Information / Services', action:() => withData(['centres'], churchMenu)},
+    {label:'Upcoming Events', action:() => withData(['events', 'centres'], eventsMenu)},
     {label:'Sermons & Media', action:() => sermonsMenu()},
-    {label:'Forms & Registration', action:() => formsMenu()},
+    {label:'Forms & Registration', action:() => withData(['forms'], formsMenu)},
     {label:'Giving', action:() => giving()},
     {label:'Pastors & Ministers / Workforce Leaders', action:() => leadershipMenu()},
     {label:'Resources', action:() => resourcesMenu()},
@@ -406,6 +407,12 @@ state.currentContext = null;
 
   function branchDetails(which) {
   const centre = findCentre(which);
+
+  if (!centre && state.loadFailed.centres) {
+    addBot('<strong>Church information is currently unavailable.</strong><br>Please try again later.');
+    addUtilityButtons();
+    return;
+  }
 
   if (!centre) {
     addBot('<strong>Branch information unavailable.</strong><br>I could not find this worship centre in the DCC Information Hub database.');
@@ -1063,6 +1070,12 @@ async function workforceDepartmentDetails(branch, departmentName) {
     return;
   }
 
+  if (!events.length && state.loadFailed.events) {
+    addBot('<strong>Event information is currently unavailable.</strong><br>Please try again later.');
+    addUtilityButtons();
+    return;
+  }
+
   if (!events.length) {
     addBot('There are no upcoming events listed at the moment. Please check again later or contact DCC for updates.');
     addUtilityButtons();
@@ -1676,87 +1689,90 @@ function tokenize(query) {
     addUtilityButtons();
   }
 
+  // Fetch with a time limit, retrying once after a short pause, so a brief
+  // database or network hiccup doesn't stop the bot from starting.
+  async function fetchWithRetry(url, attempts = 2) {
+    let lastError;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        if (!res.ok) throw new Error(`Could not load ${url}: ${res.status}`);
+        return res;
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts) await new Promise(resolve => setTimeout(resolve, 1500));
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    throw lastError;
+  }
+
+  async function fetchApiResult(url, label) {
+    const res = await fetchWithRetry(url);
+    const result = await res.json();
+    if (!result.success) throw new Error(result.message || `Could not load ${label}`);
+    return result;
+  }
+
   async function loadKnowledgeBase() {
-    const entries = await Promise.all(CONFIG.dataFiles.map(async file => {
-      const res = await fetch(file, {cache:'no-store'});
-      if (!res.ok) throw new Error(`Could not load ${file}: ${res.status}`);
-      return [file, await res.text()];
+    const files = CONFIG.dataFiles.filter(file => !(file in state.data));
+    const results = await Promise.allSettled(files.map(async file => {
+      const res = await fetchWithRetry(file);
+      state.data[file] = await res.text();
     }));
-    entries.forEach(([file, text]) => state.data[file] = text);
-    state.ready = true;
-    state.loading = false;
-    els.status.innerHTML = '<span class="online"></span>Knowledge base loaded';
+    const failed = results.filter(r => r.status === 'rejected');
+    failed.forEach(r => console.error(r.reason));
+    if (failed.length) throw new Error(`${failed.length} knowledge base file(s) could not be loaded`);
   }
 
-async function loadEventsFromApi() {
-  const res = await fetch('/api/events', {
-    cache: 'no-store'
-  });
-
-  if (!res.ok) {
-    throw new Error(`Could not load events: ${res.status}`);
+  async function loadEventsFromApi() {
+    const result = await fetchApiResult('/api/events', 'events');
+    state.events = Array.isArray(result.events) ? result.events : [];
+    return state.events;
   }
 
-  const result = await res.json();
-
-  if (!result.success) {
-    throw new Error(result.message || 'Could not load events');
+  async function loadWorshipCentresFromApi() {
+    const result = await fetchApiResult('/api/worship-centres', 'worship centres');
+    state.worshipCentres = Array.isArray(result.worshipCentres) ? result.worshipCentres : [];
+    return state.worshipCentres;
   }
 
-  state.events = result.events;
-
-  console.log('Events loaded from MongoDB:', state.events);
-
-  return state.events;
-}
-
-async function loadWorshipCentresFromApi() {
-  const res = await fetch('/api/worship-centres', {
-    cache: 'no-store'
-  });
-
-  if (!res.ok) {
-    throw new Error(`Could not load worship centres: ${res.status}`);
+  async function loadFormsFromApi() {
+    const result = await fetchApiResult('/api/forms', 'forms');
+    if (!Array.isArray(result.forms)) throw new Error('Invalid forms response');
+    state.forms = result.forms.filter(
+      form => form.status === 'active' && form.name && form.link
+    );
+    return state.forms;
   }
 
-  const result = await res.json();
+  const DATA_LOADERS = {
+    knowledge: loadKnowledgeBase,
+    events: loadEventsFromApi,
+    centres: loadWorshipCentresFromApi,
+    forms: loadFormsFromApi
+  };
 
-  if (!result.success) {
-    throw new Error(result.message || 'Could not load worship centres');
+  // Load the given data sources at the same time. Anything that fails is
+  // remembered in state.loadFailed so it can be tried again later.
+  async function loadData(keys) {
+    const results = await Promise.allSettled(keys.map(key => DATA_LOADERS[key]()));
+    results.forEach((result, i) => {
+      state.loadFailed[keys[i]] = result.status === 'rejected';
+      if (result.status === 'rejected') console.error(`Could not load ${keys[i]}:`, result.reason);
+    });
+    return results.every(result => result.status === 'rejected');
   }
 
-  state.worshipCentres = result.worshipCentres;
-
-  console.log('Worship centres loaded from MongoDB:', state.worshipCentres);
-
-  return state.worshipCentres;
-}
-
-  
-async function loadFormsFromApi() {
-  const res = await fetch('/api/forms', {
-    cache: 'no-store'
-  });
-
-  if (!res.ok) {
-    throw new Error(`Could not load forms: ${res.status}`);
+  // Before opening a menu, quietly retry any data it needs that failed earlier.
+  async function withData(keys, show) {
+    const failed = keys.filter(key => state.loadFailed[key]);
+    if (failed.length) await loadData(failed);
+    show();
   }
-
-  const result = await res.json();
-
-  if (!result.success || !Array.isArray(result.forms)) {
-    throw new Error(result.message || 'Invalid forms response');
-  }
-
-  state.forms = result.forms.filter(
-    form => form.status === 'active' && form.name && form.link
-  );
-
-  console.log('Forms loaded from MongoDB:', state.forms);
-
-  return state.forms;
-}
-
 
   function bind() {
     document.querySelectorAll('.quick').forEach(q => {
@@ -1776,27 +1792,20 @@ async function loadFormsFromApi() {
   }
 
   async function init() {
-  bind();
-  try {
-  await loadKnowledgeBase();
-  await loadEventsFromApi();
-  await loadWorshipCentresFromApi();
-  await loadFormsFromApi();
+    bind();
+    const allFailed = await loadData(Object.keys(DATA_LOADERS));
 
-  state.ready = true;
+    if (allFailed) {
+      els.status.innerHTML = '<span style="color:#e9a3a3">Information Hub unavailable</span>';
+      addBot('<strong>The DCC Information Hub could not connect to the database.</strong><br>Please try again later.');
+      return;
+    }
+
+    state.ready = true;
     state.loading = false;
-
     els.status.innerHTML = '<span class="online"></span>Online – here to help';
-
     restart();
-  } catch (err) {
-    console.error(err);
-
-    els.status.innerHTML = '<span style="color:#e9a3a3">Information Hub unavailable</span>';
-
-    addBot('<strong>The DCC Information Hub could not connect to the database.</strong><br>Please try again later.');
   }
-}
 
   init();
 })();
